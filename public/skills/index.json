@@ -1,0 +1,62 @@
+[
+  {
+    "id": "1",
+    "name": "Code Review",
+    "description": "代码审查助手，帮助审查代码质量和安全性",
+    "icon": "🔍",
+    "category": "开发",
+    "author": "系统",
+    "downloads": 156,
+    "content": "# Code Review Skill\n\n## 功能描述\n这是一个代码审查助手，可以帮助你审查代码质量和安全性。\n\n## 使用方法\n1. 输入待审查的代码\n2. 系统自动分析代码问题\n3. 返回审查建议\n\n## 注意事项\n- 请确保代码不包含敏感信息\n- 建议分批次审查大型代码文件"
+  },
+  {
+    "id": "2",
+    "name": "Bug Fix",
+    "description": "自动识别并修复常见Bug",
+    "icon": "🐛",
+    "category": "开发",
+    "author": "系统",
+    "downloads": 243,
+    "content": "# Bug Fix Skill\n\n## 功能描述\n自动识别并修复常见Bug，提供修复建议。\n\n## 支持的语言\n- JavaScript\n- TypeScript\n- Python\n- Java"
+  },
+  {
+    "id": "3",
+    "name": "Test Gen",
+    "description": "自动生成单元测试和集成测试",
+    "icon": "🧪",
+    "category": "测试",
+    "author": "用户A",
+    "downloads": 89,
+    "content": "# Test Gen Skill\n\n## 功能描述\n根据代码自动生成单元测试和集成测试用例。\n\n## 支持框架\n- Jest\n- Mocha\n- PyTest\n- JUnit"
+  },
+  {
+    "id": "4",
+    "name": "Doc Gen",
+    "description": "自动生成代码文档和注释",
+    "icon": "📄",
+    "category": "文档",
+    "author": "用户B",
+    "downloads": 67,
+    "content": "# Doc Gen Skill\n\n## 功能描述\n自动生成代码文档和API文档。"
+  },
+  {
+    "id": "5",
+    "name": "Security Scan",
+    "description": "代码安全扫描和漏洞检测",
+    "icon": "🔒",
+    "category": "安全",
+    "author": "系统",
+    "downloads": 198,
+    "content": "# Security Scan Skill\n\n## 功能描述\n扫描代码中的安全漏洞和潜在风险。"
+  },
+  {
+    "id": "6",
+    "name": "Performance Opt",
+    "description": "代码性能分析和优化建议",
+    "icon": "🚀",
+    "category": "优化",
+    "author": "用户C",
+    "downloads": 124,
+    "content": "# Performance Opt Skill\n\n## 功能描述\n分析代码性能瓶颈，提供优化建议。"
+  }
+]
