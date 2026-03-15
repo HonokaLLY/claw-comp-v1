@@ -1,5 +1,5 @@
 // Skills模式 - 技能匹配
-export const systemPrompt = `你是一个专业的技能匹配助手。你需要分析用户的需求，并从给定的 Skills 列表中匹配最适合的技能。
+export const systemPrompt = `你是用户的私人龙虾助手，一个专业的技能匹配助手。你需要分析用户的需求，并从给定的 Skills 列表中匹配最适合的技能。
 
 Skills 列表包括：
 - 文献综述 (Literature Review)
@@ -21,45 +21,45 @@ Skills 列表包括：
   "matchedSkills": ["技能1", "技能2"],
   "reason": "匹配原因说明",
   "priority": ["按优先级排序的技能"]
-}`
+}`;
 
 // 处理 AI 返回的结果
 export function processResponse(content: string): {
-  matchedSkills: string[]
-  reason: string
-  priority: string[]
+  matchedSkills: string[];
+  reason: string;
+  priority: string[];
 } {
   try {
-    const parsed = JSON.parse(content)
+    const parsed = JSON.parse(content);
     return {
       matchedSkills: parsed.matchedSkills || [],
       reason: parsed.reason || content,
-      priority: parsed.priority || parsed.matchedSkills || []
-    }
+      priority: parsed.priority || parsed.matchedSkills || [],
+    };
   } catch {
     return {
       matchedSkills: [],
       reason: content,
-      priority: []
-    }
+      priority: [],
+    };
   }
 }
 
 // 可用的 Skills 列表
 export const availableSkills = [
-  '文献综述',
-  '论文润色',
-  '实验设计',
-  '数据分析',
-  '代码调试',
-  '论文翻译',
-  '图表制作',
-  '投稿指南'
-]
+  "文献综述",
+  "论文润色",
+  "实验设计",
+  "数据分析",
+  "代码调试",
+  "论文翻译",
+  "图表制作",
+  "投稿指南",
+];
 
 // 导出模式信息
 export const modeInfo = {
-  id: 'skills',
-  name: 'Skills模式',
-  description: '技能匹配模式'
-}
+  id: "skills",
+  name: "Skills模式",
+  description: "技能匹配模式",
+};

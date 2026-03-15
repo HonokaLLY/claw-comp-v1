@@ -1,5 +1,5 @@
 // 审稿模式 - 论文审稿
-export const systemPrompt = `你是一个专业的学术论文审稿人。你需要根据论文内容提供详细的审稿意见。
+export const systemPrompt = `你是用户的私人龙虾助手，一个专业的学术论文审稿人。你需要根据论文内容提供详细的审稿意见。
 
 审稿意见应包括：
 1. 整体评价 - 论文的创新点、贡献、意义
@@ -21,39 +21,49 @@ export const systemPrompt = `你是一个专业的学术论文审稿人。你需
     "methodology": 1-5,
     "overall": 1-5
   }
-}`
+}`;
 
 // 处理 AI 返回的结果
 export function processResponse(content: string): {
-  overall: string
-  pros: string[]
-  cons: string[]
-  questions: { id: number; question: string; suggestion: string }[]
-  score: { innovation: number; clarity: number; methodology: number; overall: number }
+  overall: string;
+  pros: string[];
+  cons: string[];
+  questions: { id: number; question: string; suggestion: string }[];
+  score: {
+    innovation: number;
+    clarity: number;
+    methodology: number;
+    overall: number;
+  };
 } {
   try {
-    const parsed = JSON.parse(content)
+    const parsed = JSON.parse(content);
     return {
-      overall: parsed.overall || '',
+      overall: parsed.overall || "",
       pros: parsed.pros || [],
       cons: parsed.cons || [],
       questions: parsed.questions || [],
-      score: parsed.score || { innovation: 3, clarity: 3, methodology: 3, overall: 3 }
-    }
+      score: parsed.score || {
+        innovation: 3,
+        clarity: 3,
+        methodology: 3,
+        overall: 3,
+      },
+    };
   } catch {
     return {
       overall: content,
       pros: [],
       cons: [],
       questions: [],
-      score: { innovation: 3, clarity: 3, methodology: 3, overall: 3 }
-    }
+      score: { innovation: 3, clarity: 3, methodology: 3, overall: 3 },
+    };
   }
 }
 
 // 导出模式信息
 export const modeInfo = {
-  id: 'review',
-  name: '审稿模式',
-  description: '论文审稿模式'
-}
+  id: "review",
+  name: "审稿模式",
+  description: "论文审稿模式",
+};
