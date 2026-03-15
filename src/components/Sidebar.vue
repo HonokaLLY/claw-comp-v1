@@ -30,7 +30,8 @@ const menuItems = [
         @click="emit('toggle-chat')"
         title="切换 AI 对话"
       >
-        <span class="toggle-icon">💬</span>
+        <span class="toggle-icon">🦞</span>
+        <span class="chatbot-label">chatbot</span>
       </button>
     </div>
     <nav class="sidebar-nav">
@@ -88,17 +89,18 @@ const menuItems = [
 }
 
 .chat-toggle-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: 80px;
+  height: 44px;
+  border-radius: 12px;
   border: 1px solid #e5e7eb;
   background: #ffffff;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   transition: all 0.2s;
-  font-size: 18px;
+  font-size: 20px;
 }
 
 .chat-toggle-btn:hover {
@@ -109,6 +111,16 @@ const menuItems = [
 .chat-toggle-btn.active {
   background: linear-gradient(135deg, #5d78ff 0%, #4ba4ff 100%);
   border-color: #4f6bff;
+}
+
+.chatbot-label {
+  font-size: 12px;
+  color: #667085;
+  font-weight: 500;
+}
+
+.chat-toggle-btn.active .chatbot-label {
+  color: #fff;
 }
 
 .sidebar-nav {

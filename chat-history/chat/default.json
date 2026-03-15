@@ -1,0 +1,29 @@
+{
+  "id": "default",
+  "title": "润色论文",
+  "messages": [
+    {
+      "id": 1,
+      "role": "assistant",
+      "content": "你好！我是AI助手，有什么可以帮助你的吗？你可以问我任何问题，比如：\n- 学术论文相关的帮助（文献综述、论文润色、实验设计等）\n- 社区相关的问题\n- 日常聊天和问答"
+    },
+    {
+      "id": 1773580355056,
+      "role": "user",
+      "content": "润色论文"
+    },
+    {
+      "id": 1773580368452,
+      "role": "assistant",
+      "content": "{\n  \"matchedSkills\": [\"论文润色\"],\n  \"reason\": \"你的需求是润色论文，直接对应到论文润色技能。该技能可提升论文的语言表达、语法准确性、逻辑连贯性以及总体可读性；如需进一步完善结构、引用格式或投稿准备，可以结合其他相关技能协同完成。\",\n  \"priority\": [\"论文润色\"]\n}",
+      "modeSelect": {
+        "mode": "skills",
+        "reason": "润色论文属于学术论文的写作/润色方面的帮助，属于 skills 模式覆盖的内容。",
+        "systemPrompt": "你是一个专业的技能匹配助手。你需要分析用户的需求，并从给定的 Skills 列表中匹配最适合的技能。\n\nSkills 列表包括：\n- 文献综述 (Literature Review)\n- 论文润色 (Paper Polishing)\n- 实验设计 (Experimental Design)\n- 数据分析 (Data Analysis)\n- 代码调试 (Code Debugging)\n- 论文翻译 (Paper Translation)\n- 图表制作 (Chart Making)\n- 投稿指南 (Submission Guide)\n\n当用户提出需求时，你应该：\n1. 分析用户需求\n2. 从 Skills 列表中选择最匹配的技能\n3. 解释为什么选择这些技能\n\n请用 JSON 格式输出：\n{\n  \"matchedSkills\": [\"技能1\", \"技能2\"],\n  \"reason\": \"匹配原因说明\",\n  \"priority\": [\"按优先级排序的技能\"]\n}"
+      }
+    }
+  ],
+  "createdAt": "2026-03-15T13:08:11.525Z",
+  "updatedAt": "2026-03-15T13:12:48.451Z",
+  "mode": "chat"
+}
