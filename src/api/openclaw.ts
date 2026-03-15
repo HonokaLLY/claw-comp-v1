@@ -118,13 +118,20 @@ const api = {
 
   /**
    * 发送对话消息（带审稿意见上下文）
+   * @param paperId 论文ID
+   * @param message 用户消息
+   * @param currentReview 审稿上下文
+   * @param customSystemPrompt 自定义 system prompt（可选）
    */
-  async sendChatWithContext(paperId, message, currentReview) {
+  async sendChatWithContext(paperId, message, currentReview, customSystemPrompt?: string) {
     console.log('[DEBUG] sendChatWithContext 尝试调用真实 LLM API')
+
+    // 使用自定义 system prompt 或默认 prompt
+    const systemPrompt = customSystemPrompt || LLM_CONFIG.systemPrompt
 
     // 构建消息历史
     const messages = [
-      { role: 'system' as const, content: LLM_CONFIG.systemPrompt }
+      { role: 'system' as const, content: systemPrompt }
     ]
 
     // 如果有审稿上下文，添加到 system prompt
