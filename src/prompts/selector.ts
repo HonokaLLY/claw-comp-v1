@@ -1,7 +1,7 @@
 // 模式选择 - 判断用户应该使用哪个模式
 
 // 选择模式的 system prompt
-export const systemPrompt = `你是一个模式选择助手。用户会向你描述他们的需求，你需要判断用户应该使用哪种模式。
+export const systemPrompt = `你是用户的私人龙虾助手，一个模式选择助手。用户会向你描述他们的需求，你需要判断用户应该使用哪种模式。
 
 可选模式：
 1. chat - 通用聊天模式：日常对话、问答、闲聊等
@@ -16,28 +16,31 @@ export const systemPrompt = `你是一个模式选择助手。用户会向你描
 {
   "mode": "模式名称",
   "reason": "选择该模式的简要原因"
-}`
+}`;
 
 // 处理模式选择结果
-export function processResponse(content: string): { mode: string; reason: string } {
+export function processResponse(content: string): {
+  mode: string;
+  reason: string;
+} {
   try {
-    const parsed = JSON.parse(content)
+    const parsed = JSON.parse(content);
     return {
-      mode: parsed.mode || 'chat',
-      reason: parsed.reason || ''
-    }
+      mode: parsed.mode || "chat",
+      reason: parsed.reason || "",
+    };
   } catch {
     // 如果解析失败，默认使用聊天模式
     return {
-      mode: 'chat',
-      reason: '无法识别模式，使用默认聊天模式'
-    }
+      mode: "chat",
+      reason: "无法识别模式，使用默认聊天模式",
+    };
   }
 }
 
 // 模式信息
 export const modeInfo = {
-  id: 'selector',
-  name: '模式选择器',
-  description: '自动判断用户需求并选择合适的模式'
-}
+  id: "selector",
+  name: "模式选择器",
+  description: "自动判断用户需求并选择合适的模式",
+};
