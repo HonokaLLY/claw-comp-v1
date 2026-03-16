@@ -122,6 +122,85 @@ const chatStoragePlugin = {
         return
       }
     })
+
+    // 通用历史记录 API（不带模式前缀）
+    server.middlewares.use('/api/chat-history', async (req, res) => {
+      res.setHeader('Access-Control-Allow-Origin', '*')
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+
+      if (req.method === 'OPTIONS') {
+        res.writeHead(200)
+        res.end()
+        return
+      }
+
+      const url = req.url || '/'
+      const urlParts = url.split('/').filter(Boolean)
+      const action = urlParts[0]
+      const sessionId = urlParts[1]
+
+      const chatDir = './chat-history/chat'
+      if (!existsSync(chatDir)) {
+        mkdirSync(chatDir, { recursive: true })
+      }
+
+      // 获取历史记录列表
+      if (req.method === 'GET' && action === 'list') {
+        try {
+          const files = readdirSync(chatDir).filter(f => f.endsWith('.json'))
+          const chats = files.map(f => {
+            const content = readFileSync(`${chatDir}/${f}`, 'utf-8')
+            return JSON.parse(content)
+          })
+          chats.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+          res.writeHead(200, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify(chats))
+        } catch (err) {
+          res.writeHead(500, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ error: (err as Error).message }))
+        }
+        return
+      }
+
+      // 保存会话
+      if (req.method === 'POST' && action === 'save') {
+        let body = ''
+        req.on('data', (chunk: string) => body += chunk)
+        req.on('end', () => {
+          try {
+            const chat = JSON.parse(body)
+            if (!chat.id) {
+              chat.id = String(Date.now())
+            }
+            const filename = `${chatDir}/${chat.id}.json`
+            writeFileSync(filename, JSON.stringify(chat, null, 2))
+            res.writeHead(200, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ success: true, id: chat.id }))
+          } catch (err) {
+            res.writeHead(500, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ error: (err as Error).message }))
+          }
+        })
+        return
+      }
+
+      // 删除会话
+      if (req.method === 'DELETE' && action === 'delete' && sessionId) {
+        try {
+          const filename = `${chatDir}/${sessionId}.json`
+          if (existsSync(filename)) {
+            unlinkSync(filename)
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ success: true }))
+        } catch (err) {
+          res.writeHead(500, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ error: (err as Error).message }))
+        }
+        return
+      }
+    })
   }
 }
 

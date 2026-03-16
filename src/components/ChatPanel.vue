@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { currentReviewPaper, reviewOpinion, isGeneratingReview, generateReviewOpinion, isInReviewDetail, isInReviewMain, triggerRecommend } from '@/stores/review'
 import api, { AVAILABLE_MODELS, setModel, LLM_CONFIG } from '@/api/openclaw'
+import { systemPrompts, processResponses, selectorPrompt, selectorProcess, getModeType, type ModeType } from '@/prompts'
 
 const route = useRoute()
 
@@ -11,10 +12,137 @@ const showInReviewDetail = computed(() => {
   return route.path === '/review'
 })
 
+// 上传文件相关
+interface UploadedFile {
+  id: number
+  name: string
+  content: string
+  type: string
+}
+
+const uploadedFiles = ref<UploadedFile[]>([])
+const fileInputRef = ref<HTMLInputElement | null>(null)
+
+const handleFileUpload = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  if (!input.files?.length) return
+
+  Array.from(input.files).forEach(file => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const content = e.target?.result as string
+      uploadedFiles.value.push({
+        id: Date.now() + Math.random(),
+        name: file.name,
+        content: content,
+        type: file.name.split('.').pop() || 'unknown'
+      })
+    }
+    reader.readAsText(file)
+  })
+  input.value = ''
+}
+
+const removeFile = (fileId: number) => {
+  uploadedFiles.value = uploadedFiles.value.filter(f => f.id !== fileId)
+}
+
+// 历史记录相关
+interface ChatSession {
+  id: string
+  title: string
+  messages: Message[]
+  createdAt: string
+  updatedAt: string
+}
+
+const chatHistory = ref<ChatSession[]>([])
+const showHistory = ref(false)
+const currentSessionId = ref<string | null>(null)
+
+// 加载历史记录
+const loadHistory = async () => {
+  try {
+    const res = await fetch('/api/chat-history/list')
+    if (res.ok) {
+      chatHistory.value = await res.json()
+    }
+  } catch (e) {
+    console.log('加载历史记录失败', e)
+  }
+}
+
+// 保存当前会话
+const saveCurrentSession = async () => {
+  if (!messages.value.length) return
+
+  const sessionId = currentSessionId.value || String(Date.now())
+  const session: ChatSession = {
+    id: sessionId,
+    title: messages.value.find(m => m.role === 'user')?.content.substring(0, 20) || '新对话',
+    messages: messages.value,
+    createdAt: chatHistory.value.find(c => c.id === sessionId)?.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+
+  try {
+    await fetch('/api/chat-history/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(session)
+    })
+    currentSessionId.value = sessionId
+    loadHistory()
+  } catch (e) {
+    console.log('保存失败', e)
+  }
+}
+
+// 加载指定会话
+const loadSession = (session: ChatSession) => {
+  messages.value = session.messages
+  currentSessionId.value = session.id
+  showHistory.value = false
+}
+
+// 新建对话
+const createNewChat = () => {
+  messages.value = [
+    { id: Date.now(), role: 'assistant', content: '你好！我是AI助手，有什么可以帮助你的吗？' }
+  ]
+  currentSessionId.value = null
+  uploadedFiles.value = []
+  // 保存新对话到历史记录
+  saveCurrentSession()
+}
+
+// 删除会话
+const deleteSession = async (sessionId: string, event: Event) => {
+  event.stopPropagation()
+  try {
+    await fetch(`/api/chat-history/delete/${sessionId}`, { method: 'DELETE' })
+    if (currentSessionId.value === sessionId) {
+      createNewChat()
+    }
+    loadHistory()
+  } catch (e) {
+    console.log('删除失败', e)
+  }
+}
+
+onMounted(() => {
+  loadHistory()
+})
+
 interface Message {
   id: number
   role: 'user' | 'assistant'
   content: string
+  modeSelect?: {
+    mode: string
+    reason: string
+    systemPrompt: string
+  }
 }
 
 const props = defineProps<{
@@ -140,21 +268,57 @@ const sendMessage = async () => {
     return
   }
 
-  // 普通对话
+  // 普通对话 - 先判断使用哪种模式（不显示在界面，只保存到JSON）
   try {
+    // 第一步：调用模式选择器，让大模型判断应该用哪个模式
+    console.log('[模式选择] 开始判断用户问题应该使用哪种模式...')
+    console.log('[模式选择] 用户问题:', question)
+
+    const selectResponse = await api.sendChatWithContext(
+      0,
+      `请判断用户以下问题应该使用哪种模式：${question}`,
+      {},
+      selectorPrompt
+    )
+
+    // 解析模式选择结果
+    const selectResult = selectorProcess(selectResponse.reply || '{}')
+    const selectedMode = getModeType(selectResult.mode)
+
+    console.log('%c[模式选择] 选择的模式: ' + selectedMode, 'color: #10b981; font-weight: bold')
+    console.log('[模式选择] 原因:', selectResult.reason)
+
+    // 第二步：使用对应模式的 system prompt 调用大模型回答问题
+    const modeSystemPrompt = systemPrompts[selectedMode]
+    console.log('%c[模式选择] 使用的 System Prompt:', 'color: #3b82f6; font-weight: bold')
+
     const response = await api.sendChatWithContext(
       currentReviewPaper.value?.id || 0,
       question,
-      { reviewMarkdown: reviewOpinion.value }
+      { reviewMarkdown: reviewOpinion.value },
+      modeSystemPrompt
     )
+
+    // 使用对应模式的处理函数格式化输出
+    const processedContent = processResponses[selectedMode](response.reply || '')
+
+    // 保存模式选择信息到 JSON
+    const modeSelectInfo = {
+      mode: selectedMode,
+      reason: selectResult.reason,
+      systemPrompt: modeSystemPrompt
+    }
+    console.log('[保存] 模式选择信息:', modeSelectInfo)
+
     const aiMsg: Message = {
       id: Date.now() + 1,
       role: 'assistant',
-      content: response.reply || '抱歉，无法获取回复'
+      content: typeof processedContent === 'string' ? processedContent : response.reply || '抱歉，无法获取回复',
+      modeSelect: modeSelectInfo
     }
     messages.value.push(aiMsg)
-    // 注意：普通对话不填入审稿意见栏，只有生成审稿意见时才填入
   } catch (error) {
+    console.error('对话出错:', error)
     const aiMsg: Message = {
       id: Date.now() + 1,
       role: 'assistant',
@@ -164,14 +328,20 @@ const sendMessage = async () => {
   }
 
   isLoading.value = false
+  // 保存会话
+  saveCurrentSession()
 }
 </script>
 
 <template>
   <div class="chat-panel" :class="{ 'is-floating': isFloating }">
     <div class="panel-header">
-      <h3>AI 对话</h3>
+      <h3>🦞 龙虾助手</h3>
       <div class="header-actions">
+        <!-- 历史记录按钮 -->
+        <button class="history-toggle-btn" @click="showHistory = !showHistory" title="历史记录">
+          📜
+        </button>
         <!-- 模型选择器 -->
         <div class="model-selector">
           <button class="model-btn" @click="showModelDropdown = !showModelDropdown">
@@ -202,15 +372,15 @@ const sendMessage = async () => {
         :class="{ 'message-user': msg.role === 'user', 'message-assistant': msg.role === 'assistant' }"
       >
         <div class="message-avatar">
-          <span v-if="msg.role === 'user'">U</span>
-          <span v-else>AI</span>
+          <span v-if="msg.role === 'user'" class="avatar-user">U</span>
+          <span v-else class="avatar-ai">🦞</span>
         </div>
         <div class="message-content">
           <div class="message-text">{{ msg.content }}</div>
         </div>
       </div>
       <div v-if="isLoading" class="message message-assistant">
-        <div class="message-avatar">AI</div>
+        <div class="message-avatar"><span class="avatar-ai">🦞</span></div>
         <div class="message-content">
           <div class="message-text loading">
             <span class="dot"></span>
@@ -221,16 +391,55 @@ const sendMessage = async () => {
       </div>
     </div>
     <div class="panel-input">
-      <input
-        v-model="inputMessage"
-        type="text"
-        placeholder="输入消息..."
-        :disabled="isLoading"
-        @keyup.enter="sendMessage"
-      />
-      <button @click="sendMessage" :disabled="isLoading || !inputMessage.trim()">
-        发送
-      </button>
+      <!-- 已上传文件列表 -->
+      <div v-if="uploadedFiles.length" class="uploaded-files">
+        <span v-for="file in uploadedFiles" :key="file.id" class="file-tag">
+          📎 {{ file.name }}
+          <span class="remove-file" @click="removeFile(file.id)">×</span>
+        </span>
+      </div>
+      <div class="input-row">
+        <input
+          type="file"
+          ref="fileInputRef"
+          @change="handleFileUpload"
+          accept=".pdf,.docx,.txt,.md"
+          multiple
+          style="display: none"
+        />
+        <button class="upload-btn" @click="fileInputRef?.click()" title="上传文件">
+          📎
+        </button>
+        <input
+          v-model="inputMessage"
+          type="text"
+          placeholder="输入消息..."
+          :disabled="isLoading"
+          @keyup.enter="sendMessage"
+        />
+        <button @click="sendMessage" :disabled="isLoading || !inputMessage.trim()">
+          发送
+        </button>
+      </div>
+    </div>
+    <!-- 历史记录侧边栏 -->
+    <div v-if="showHistory" class="history-sidebar">
+      <div class="history-header">
+        <h4>历史记录</h4>
+        <button class="new-chat-btn" @click="createNewChat">+ 新建对话</button>
+      </div>
+      <div class="history-list">
+        <div
+          v-for="session in chatHistory"
+          :key="session.id"
+          class="history-item"
+          :class="{ active: session.id === currentSessionId }"
+          @click="loadSession(session)"
+        >
+          <span class="history-title">{{ session.title }}</span>
+          <button class="delete-btn" @click="deleteSession(session.id, $event)">🗑️</button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -267,6 +476,21 @@ const sendMessage = async () => {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.history-toggle-btn {
+  padding: 8px 12px;
+  background: #f6f9ff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s;
+}
+
+.history-toggle-btn:hover {
+  background: #eef2ff;
+  border-color: #4f6bff;
 }
 
 /* 模型选择器 */
@@ -489,5 +713,179 @@ const sendMessage = async () => {
   background: #e5e7eb;
   color: #9ca3af;
   cursor: not-allowed;
+}
+
+/* 上传文件样式 */
+.uploaded-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 8px;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.file-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: #e0e7ff;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #4f6bff;
+}
+
+.remove-file {
+  cursor: pointer;
+  color: #9ca3af;
+  font-weight: bold;
+}
+
+.remove-file:hover {
+  color: #ef4444;
+}
+
+.input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.upload-btn, .history-btn {
+  padding: 8px 10px;
+  background: #f6f9ff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s;
+}
+
+.upload-btn:hover, .history-btn:hover {
+  background: #eef2ff;
+  border-color: #4f6bff;
+}
+
+/* 历史记录侧边栏 */
+.history-sidebar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 260px;
+  background: white;
+  border-right: 1px solid #e5e7eb;
+  box-shadow: 4px 0 12px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.history-header h4 {
+  margin: 0;
+  font-size: 14px;
+  color: #1f2937;
+}
+
+.new-chat-btn {
+  padding: 6px 12px;
+  background: #4f6bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.new-chat-btn:hover {
+  background: #3b5bff;
+}
+
+.history-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  margin-bottom: 4px;
+  background: #f9fafb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.history-item:hover {
+  background: #f3f4f6;
+}
+
+.history-item.active {
+  background: #e0e7ff;
+  border: 1px solid #4f6bff;
+}
+
+.history-title {
+  font-size: 13px;
+  color: #374151;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.delete-btn {
+  padding: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s;
+  font-size: 12px;
+}
+
+.history-item:hover .delete-btn {
+  opacity: 1;
+}
+
+.delete-btn:hover {
+  transform: scale(1.1);
+}
+
+/* 头像样式 */
+.avatar-user {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 50%;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.avatar-ai {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
 }
 </style>
