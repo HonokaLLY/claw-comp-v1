@@ -2,6 +2,20 @@
 // LLM API 配置 - 在这里修改你的 API 设置
 // ============================================
 
+interface Paper {
+  id: number
+  title: string
+  authors?: string
+  keywords: string[]
+  abstract: string
+  pdfUrl?: string
+  arXivId?: string
+  venue?: string
+  submittedDate?: string
+  deadline?: string
+  isDone?: boolean
+}
+
 // 可用模型列表
 export const AVAILABLE_MODELS = [
   { id: 'gpt-5-nano', name: 'GPT-5 Nano' },
@@ -117,45 +131,133 @@ const api = {
   },
 
   /**
+   * 获取所有论文列表
+   */
+  async getAllPapers() {
+    try {
+      const response = await fetch('/data/papers.json')
+      const data = await response.json()
+      return data.all || []
+    } catch (error) {
+      console.error('获取所有论文失败:', error)
+      return []
+    }
+  },
+
+  /**
+   * 获取待审稿论文列表
+   */
+  async getPendingPapers() {
+    try {
+      const response = await fetch('/data/papers.json')
+      const data = await response.json()
+      return data.pending || []
+    } catch (error) {
+      console.error('获取待审稿论文失败:', error)
+      return []
+    }
+  },
+
+  /**
+   * 获取已完成的论文列表
+   */
+  async getCompletedPapers() {
+    try {
+      const response = await fetch('/data/papers.json')
+      const data = await response.json()
+      return data.completed || []
+    } catch (error) {
+      console.error('获取已完成论文失败:', error)
+      return []
+    }
+  },
+
+  /**
+   * 发送聊天消息（用于论文推荐等）
+   */
+  async sendChatMessage(message: string) {
+    console.log('[DEBUG] sendChatMessage 尝试调用真实 LLM API')
+
+    const messages = [
+      { role: 'system' as const, content: '你是一个友好的AI助手。请简洁地回答用户问题。' },
+      { role: 'user' as const, content: message }
+    ]
+
+    try {
+      const reply = await callLLM(messages)
+      return { reply }
+    } catch (error) {
+      console.error('LLM API 调用失败:', error)
+      return { reply: '抱歉，我现在无法处理您的请求。' }
+    }
+  },
+
+  /**
    * 发送对话消息（带审稿意见上下文）
    * @param paperId 论文ID
    * @param message 用户消息
-   * @param currentReview 审稿上下文
-   * @param customSystemPrompt 自定义 system prompt（可选）
+   * @param currentReview 当前审稿信息
+   * @param isOnReviewPage 是否在审稿页面（只在审稿页面才处理审稿相关请求）
+   * @param isOnReviewPage 是否在审稿页面（只在审稿页面才处理审稿相关请求）
    */
-  async sendChatWithContext(paperId, message, currentReview, customSystemPrompt?: string) {
+  async sendChatWithContext(paperId: number, message: string, currentReview: { reviewMarkdown?: string } | null, isOnReviewPage: boolean = false): Promise<{ reply: string; isReview?: boolean }> {
     console.log('[DEBUG] sendChatWithContext 尝试调用真实 LLM API')
 
-    // 使用自定义 system prompt 或默认 prompt
-    const systemPrompt = customSystemPrompt || LLM_CONFIG.systemPrompt
+    // 检查用户是否请求生成审稿意见（只在审稿页面生效）
+    const lowerMessage = message.toLowerCase()
+    const isReviewRequest = isOnReviewPage && (
+      lowerMessage.includes('审稿') ||
+      lowerMessage.includes('review') ||
+      lowerMessage.includes('评审') ||
+      lowerMessage.includes('生成审稿')
+    )
 
     // 构建消息历史
-    const messages = [
-      { role: 'system' as const, content: systemPrompt }
-    ]
+    let systemContent = LLM_CONFIG.systemPrompt
 
-    // 如果有审稿上下文，添加到 system prompt
-    if (currentReview?.reviewMarkdown) {
-      messages[0].content += `\n\n当前论文的审稿意见:\n${currentReview.reviewMarkdown}`
+    // 如果是审稿请求，修改 system prompt 让 LLM 生成审稿意见
+    if (isReviewRequest) {
+      // 获取论文信息
+      const allPapers = await this.getAllPapers()
+      const paper = allPapers.find((p: Paper) => p.id === paperId)
+
+      systemContent = `你是一个专业的学术论文审稿人。请根据以下论文信息生成一份详细的审稿意见，包括：
+1. 整体评价
+2. 论文优点
+3. 论文缺点
+4. 具体问题和建议
+请用 Markdown 格式输出审稿意见。
+
+论文标题: ${paper?.title || '未知'}
+作者: ${paper?.authors || '未知'}
+摘要: ${paper?.abstract || '未知'}`
+    } else if (currentReview?.reviewMarkdown) {
+      // 如果有审稿上下文，添加到 system prompt
+      systemContent += `\n\n当前论文的审稿意见:\n${currentReview.reviewMarkdown}`
     }
 
-    // 添加用户消息
-    messages.push({ role: 'user' as const, content: message })
+    const messages: { role: 'system' | 'user'; content: string }[] = [
+      { role: 'system', content: systemContent },
+      { role: 'user', content: message }
+    ]
 
     try {
       // 调用 LLM API
       const reply = await callLLM(messages)
+
+      // 如果是审稿请求，标记返回结果
+      if (isReviewRequest) {
+        return { reply, isReview: true }
+      }
       return { reply }
     } catch (error) {
       console.error('LLM API 调用失败，使用 Mock 数据:', error)
 
-      // 如果 API 调用失败，回退到 Mock 数据
       // 模拟网络延迟
       await new Promise(resolve => setTimeout(resolve, 1000))
 
       // 如果用户消息中包含"审稿"、"review"等关键词，返回完整审稿意见
-      const lowerMessage = message.toLowerCase()
-      if (lowerMessage.includes('审稿') || lowerMessage.includes('review') || lowerMessage.includes('评审')) {
+      if (isReviewRequest) {
         return {
           reply: MOCK_REVIEW_MARKDOWN,
           isReview: true
@@ -172,7 +274,7 @@ const api = {
   /**
    * 生成论文审稿意见
    */
-  async generateReview(paper) {
+  async generateReview(paper: Paper): Promise<{ reply: string; isReview: boolean }> {
     console.log('[DEBUG] generateReview 尝试调用真实 LLM API')
 
     // 构建生成审稿意见的提示
@@ -185,8 +287,8 @@ const api = {
     const systemPrompt = `你是一个专业的学术论文审稿人。请根据以下论文信息生成一份详细的审稿意见，包括：
 
 1. 整体评价
-2. 论文的优点
-3. 需要改进的地方
+2. 论文优点
+3. 论文缺点
 4. 具体问题和建议
 
 请用 Markdown 格式输出审稿意见。${paperInfo}`

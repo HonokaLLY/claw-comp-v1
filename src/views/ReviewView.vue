@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import api from '@/api/openclaw'
-import { currentReviewPaper, reviewOpinion, setCurrentReviewPaper } from '@/stores/review'
+import { currentReviewPaper, reviewOpinion, setCurrentReviewPaper, setIsInReviewDetail, setIsInReviewMain, triggerRecommend } from '@/stores/review'
 
 interface Paper {
   id: number
@@ -24,11 +24,29 @@ const myPapers = ref<Paper[]>([])
 const currentPaper = ref<Paper | null>(null)
 const recommendedPapers = ref<Paper[]>([])
 const expandedPapers = ref<number[]>([])
+const showWelcome = ref(localStorage.getItem('review_welcome_shown') !== 'true')
+const showLaterMessage = ref(false)
+
+// 是否显示论文列表（欢迎页和消息都不显示时）
+const showPaperList = computed(() => !showWelcome.value && !showLaterMessage.value)
+const isRecommending = ref(false)
+const showRecommendTip = ref(false)
+const hasConfirmedQualification = ref(false)
 
 // 审稿状态
 const reviewData = ref({
-  reviewMarkdown: ''
+  reviewMarkdown: '',
+  reviewResult: '' as '' | 'accept' | 'minor' | 'major' | 'reject'
 })
+const isCompleted = ref(false)
+
+// 审稿结论选项
+const reviewOptions = [
+  { value: 'accept', label: '接收', activeClass: 'bg-green-500 text-white' },
+  { value: 'minor', label: '小修', activeClass: 'bg-blue-500 text-white' },
+  { value: 'major', label: '大修', activeClass: 'bg-orange-500 text-white' },
+  { value: 'reject', label: '拒稿', activeClass: 'bg-red-500 text-white' }
+]
 const isLoadingReview = ref(false)
 const userInput = ref('')
 const messages = ref<{ role: 'user' | 'assistant'; content: string }[]>([])
@@ -37,7 +55,7 @@ const chatContainer = ref<HTMLElement | null>(null)
 const showSuccessModal = ref(false)
 
 // 宽度控制
-const leftWidth = ref(450)
+const leftWidth = ref(1200)
 const middleWidth = ref(450)
 const mainWidth = ref(700)
 const resizing = ref<'left' | 'middle' | 'main' | null>(null)
@@ -66,13 +84,39 @@ watch(reviewOpinion, (newVal) => {
   }
 })
 
+// 监听当前论文状态，返回列表时清除全局审稿状态
+watch(currentPaper, (newVal) => {
+  if (!newVal) {
+    setCurrentReviewPaper(null)
+  }
+})
+
+// 监听推荐触发器，从ChatPanel触发推荐功能
+watch(triggerRecommend, () => {
+  recommendPapers()
+})
+
 // 加载数据
 onMounted(async () => {
   try {
-    const data = await api.getRecommendedPapers()
-    recommendedPapers.value = data
+    // 加载各分类论文
+    const [recommendedData, pendingData, completedData] = await Promise.all([
+      api.getRecommendedPapers(),
+      api.getPendingPapers(),
+      api.getCompletedPapers()
+    ])
+    recommendedPapers.value = recommendedData
+
+    // 同时从 all 中加载作为备选/全部论文
+    const allPapers = await api.getAllPapers()
+    // 可以将 all 存储起来用于其他用途
   } catch (error) {
-    console.error('加载推荐论文失败:', error)
+    console.error('加载论文列表失败:', error)
+  }
+
+  // 如果有当前论文，自动加载审稿意见
+  if (currentPaper.value) {
+    loadReview()
   }
 })
 
@@ -97,11 +141,67 @@ const confirmReview = () => {
   selectedIds.value = []
 }
 
+// 推荐论文功能
+const recommendPapers = async () => {
+  isRecommending.value = true
+  showRecommendTip.value = true
+
+  try {
+    // 获取所有论文
+    const allPapers: Paper[] = await api.getAllPapers()
+
+    // 构建提示信息
+    const paperList = allPapers.map((p: Paper) => `- ${p.title} (ID: ${p.id}, 关键词: ${p.keywords.join(', ')})`).join('\n')
+
+    // 判断是首次推荐还是重新推荐
+    const isRercommend = recommendedPapers.value.length > 0
+    const prompt = isRercommend
+      ? `你是一个论文推荐助手。请根据用户的研究兴趣从以下论文列表中重新推荐3-5篇最适合审稿的论文。
+请从列表中选择与用户研究领域最相关的论文，只需要返回论文的ID号，用逗号分隔，不需要其他内容。
+
+论文列表：
+${paperList}
+
+请只返回论文ID，用逗号分隔，例如：1,3,5`
+      : `你是一个论文推荐助手。请根据用户的研究兴趣从以下论文列表中推荐最适合审稿的论文。
+请从列表中选择3-5篇最相关的论文，只需要返回论文的ID号，用逗号分隔，不需要其他内容。
+
+论文列表：
+${paperList}
+
+请只返回论文ID，用逗号分隔，例如：1,3,5`
+
+    // 调用LLM API
+    const result = await api.sendChatMessage(prompt)
+    const reply = result.reply
+
+    // 解析LLM返回的论文ID
+    const idMatch = reply.match(/\d+/g)
+    if (idMatch) {
+      const recommendedIds = idMatch.map(id => parseInt(id)).filter(id => id > 0 && id <= allPapers.length)
+      const recommended = allPapers.filter((p: Paper) => recommendedIds.includes(p.id))
+      recommendedPapers.value = recommended
+    }
+
+    showRecommendTip.value = false
+  } catch (error) {
+    console.error('推荐论文失败:', error)
+    showRecommendTip.value = false
+  } finally {
+    isRecommending.value = false
+  }
+}
+
+// 判断是否显示推荐按钮（recommended为空时显示"推荐审稿"）
+const showRecommendButton = computed(() => recommendedPapers.value.length === 0)
+
 // 进入审稿模式
-const enterReviewMode = (paper: Paper) => {
+const enterReviewMode = (paper: Paper, completed: boolean = false) => {
   currentPaper.value = paper
   messages.value = []
   reviewData.value.reviewMarkdown = ''
+  reviewData.value.reviewResult = ''
+  isCompleted.value = completed
   // 设置全局状态，供右侧聊天面板使用
   setCurrentReviewPaper({
     id: paper.id,
@@ -110,20 +210,32 @@ const enterReviewMode = (paper: Paper) => {
     pdfUrl: paper.pdfUrl,
     arXivId: paper.arXivId
   })
-  // 注意：默认不加载审稿意见，需要用户发送"生成审稿意见"后才生成
+  // 标记进入审稿详情界面
+  setIsInReviewDetail(true)
+  // 标记离开审稿主界面
+  setIsInReviewMain(false)
 }
 
 // 返回主界面
 const goBack = () => {
   currentPaper.value = null
   setCurrentReviewPaper(null)
+  // 标记离开审稿详情界面
+  setIsInReviewDetail(false)
+  // 标记进入审稿主界面
+  setIsInReviewMain(true)
 }
 
 // 宽度调整
+let startX = 0
+let startWidth = 0
+
 const startResize = (panel: 'left' | 'middle' | 'main', event: MouseEvent) => {
   resizing.value = panel
-  document.addEventListener('mousemove', handleResize)
-  document.addEventListener('mouseup', stopResize)
+  startX = event.clientX
+  startWidth = leftWidth.value
+  document.addEventListener('mousemove', handleResize, { passive: false })
+  document.addEventListener('mouseup', stopResize, { passive: false })
   event.preventDefault()
 }
 
@@ -131,8 +243,9 @@ const handleResize = (event: MouseEvent) => {
   if (!resizing.value) return
 
   if (resizing.value === 'left') {
-    const newWidth = event.clientX
-    leftWidth.value = Math.max(300, Math.min(800, newWidth))
+    const delta = event.clientX - startX
+    const newWidth = startWidth + delta
+    leftWidth.value = Math.max(300, Math.min(1200, newWidth))
   } else if (resizing.value === 'middle') {
     const newWidth = event.clientX - leftWidth.value
     middleWidth.value = Math.max(300, Math.min(800, newWidth))
@@ -144,6 +257,8 @@ const handleResize = (event: MouseEvent) => {
 
 const stopResize = () => {
   resizing.value = null
+  startX = 0
+  startWidth = 0
   document.removeEventListener('mousemove', handleResize)
   document.removeEventListener('mouseup', stopResize)
 }
@@ -168,6 +283,55 @@ const sendMessage = async () => {
   if (!userInput.value.trim() || isLoading.value || !currentPaper.value) return
 
   const question = userInput.value.trim()
+
+  // 检查是否是审稿请求（关键词检测）
+  const lowerQuestion = question.toLowerCase()
+  const isReviewRequest = lowerQuestion.includes('审稿') ||
+    lowerQuestion.includes('review') ||
+    lowerQuestion.includes('评审') ||
+    lowerQuestion.includes('生成审稿')
+
+  // 如果是审稿请求，直接生成审稿意见
+  if (isReviewRequest) {
+    messages.value.push({ role: 'user', content: question })
+    userInput.value = ''
+    isLoading.value = true
+
+    // 添加系统消息提示正在生成
+    messages.value.push({
+      role: 'assistant',
+      content: '好的，我正在为您生成这篇论文的审稿意见，请稍候...'
+    })
+
+    try {
+      const result = await api.generateReview(currentPaper.value)
+      if (result && result.reply) {
+        // 将生成的审稿意见填入审稿框
+        reviewData.value.reviewMarkdown = result.reply
+        // 更新聊天消息
+        messages.value = messages.value.slice(0, -1) // 移除提示消息
+        messages.value.push({
+          role: 'assistant',
+          content: '已为您生成审稿意见，已自动填入左侧审稿意见框。\n\n' + result.reply
+        })
+      }
+    } catch (error) {
+      messages.value = messages.value.slice(0, -1)
+      messages.value.push({
+        role: 'assistant',
+        content: '抱歉，生成审稿意见时出现错误，请稍后重试。'
+      })
+    }
+
+    isLoading.value = false
+    await nextTick()
+    if (chatContainer.value) {
+      chatContainer.value.scrollTop = chatContainer.value.scrollHeight
+    }
+    return
+  }
+
+  // 普通对话流程
   messages.value.push({ role: 'user', content: question })
   userInput.value = ''
   isLoading.value = true
@@ -189,7 +353,8 @@ const sendMessage = async () => {
       content: response.reply || '抱歉，无法获取回复'
     })
 
-    if (response.isReview && response.reply) {
+    // 直接将回复填入审稿意见框
+    if (response && response.reply) {
       reviewData.value.reviewMarkdown = response.reply
     }
   } catch (error) {
@@ -223,6 +388,23 @@ const confirmSuccess = () => {
 }
 
 const nextTick = () => new Promise(resolve => setTimeout(resolve, 10))
+
+// 欢迎界面处理
+const tryReview = () => {
+  // 记住用户的选择，不再显示欢迎弹窗
+  localStorage.setItem('review_welcome_shown', 'true')
+  showWelcome.value = false
+}
+
+const laterReview = () => {
+  // 关闭欢迎弹窗，显示期待加入的消息
+  showWelcome.value = false
+  showLaterMessage.value = true
+  // 3秒后自动关闭
+  setTimeout(() => {
+    showLaterMessage.value = false
+  }, 3000)
+}
 </script>
 
 <template>
@@ -239,7 +421,7 @@ const nextTick = () => new Promise(resolve => setTimeout(resolve, 10))
           <h3 class="panel-title">论文原文</h3>
         </div>
         <div class="panel-content">
-          <iframe v-if="currentPaper.pdfUrl" :src="currentPaper.pdfUrl" class="pdf-frame" title="论文PDF"></iframe>
+          <iframe v-if="currentPaper.pdfUrl" :src="currentPaper.pdfUrl" class="pdf-frame" :class="{ 'no-pointer': resizing }" title="论文PDF"></iframe>
           <div v-else class="no-pdf">
             <p>暂无PDF</p>
             <a v-if="currentPaper.arXivId" :href="`https://arxiv.org/abs/${currentPaper.arXivId}`" target="_blank" class="arxiv-link">
@@ -247,9 +429,10 @@ const nextTick = () => new Promise(resolve => setTimeout(resolve, 10))
             </a>
           </div>
         </div>
-        <!-- 拖动条 -->
-        <div class="resize-handle" @mousedown="startResize('left', $event)"></div>
       </aside>
+
+      <!-- 中间：拖动条 -->
+      <div class="resize-handle" @mousedown="startResize('left', $event)"></div>
 
       <!-- 右侧：审稿结果 -->
       <aside class="panel-right">
@@ -258,9 +441,6 @@ const nextTick = () => new Promise(resolve => setTimeout(resolve, 10))
             <h3 class="panel-title">AI审稿分析</h3>
             <p class="panel-subtitle">OpenCLAW</p>
           </div>
-          <button class="refresh-btn" @click="loadReview" :disabled="isLoadingReview || !reviewData.reviewMarkdown">
-            {{ isLoadingReview ? '生成中...' : '生成审稿' }}
-          </button>
         </div>
 
         <div class="panel-content">
@@ -270,7 +450,6 @@ const nextTick = () => new Promise(resolve => setTimeout(resolve, 10))
             <div class="paper-tags">
               <span v-for="tag in currentPaper.keywords" :key="tag" class="tag">{{ tag }}</span>
             </div>
-            <p v-if="currentPaper.venue" class="paper-venue">{{ currentPaper.venue }}</p>
           </div>
 
           <!-- 审稿意见 -->
@@ -278,16 +457,37 @@ const nextTick = () => new Promise(resolve => setTimeout(resolve, 10))
             <div class="review-label">审稿意见 (Markdown)</div>
             <textarea
               v-model="reviewData.reviewMarkdown"
+              :readonly="isCompleted"
               rows="20"
               class="review-textarea"
-              placeholder="在右侧边栏发送'生成审稿意见'获取完整审稿..."
+              :class="{ 'completed': isCompleted }"
+              placeholder="点击下方按钮生成审稿意见，或在右侧栏对话中请求生成..."
             ></textarea>
+          </div>
+
+          <!-- 审稿结论选项 -->
+          <div class="review-options">
+            <div class="review-options-label">审稿结论</div>
+            <div class="review-options-buttons">
+              <button
+                v-for="option in reviewOptions"
+                :key="option.value"
+                @click="!isCompleted && (reviewData.reviewResult = option.value)"
+                :disabled="isCompleted"
+                :class="['review-option-btn', option.value, { active: reviewData.reviewResult === option.value, disabled: isCompleted }]"
+              >
+                {{ option.label }}
+              </button>
+            </div>
           </div>
         </div>
 
         <div class="panel-footer">
-          <button class="export-btn">导出审稿意见</button>
-          <button class="submit-btn" @click="handleSubmitReview">提交审稿</button>
+          <button class="generate-btn" @click="loadReview" :disabled="isLoadingReview || isCompleted">
+            {{ isLoadingReview ? '生成中...' : '生成审稿意见' }}
+          </button>
+          <button class="export-btn" :disabled="isCompleted">导出审稿意见</button>
+          <button class="submit-btn" @click="handleSubmitReview" :disabled="isCompleted">提交审稿</button>
         </div>
       </aside>
 
@@ -304,6 +504,41 @@ const nextTick = () => new Promise(resolve => setTimeout(resolve, 10))
 
     <!-- 主界面 -->
     <div v-else class="review-main-view">
+      <!-- 期待加入的消息 -->
+      <div v-if="showLaterMessage" class="later-message">
+        <div class="later-message-card">
+          <div class="later-message-icon">👋</div>
+          <p class="later-message-text">好的，期待您的加入</p>
+        </div>
+      </div>
+
+      <!-- 欢迎界面和论文列表 -->
+      <template v-if="showWelcome">
+      <div class="welcome-container">
+        <div class="welcome-card">
+          <div class="welcome-icon">
+            <svg class="w-16 h-16 mx-auto text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <h2 class="welcome-title">欢迎使用论文审稿系统</h2>
+          <p class="welcome-text">您已具有审稿资格，是否要尝试审稿，我可以为您推荐相关论文</p>
+          <div class="welcome-actions">
+            <button @click="tryReview"
+                    class="try-review-btn">
+              尝试审稿
+            </button>
+            <button @click="laterReview"
+                    class="later-btn">
+              下次再来
+            </button>
+          </div>
+        </div>
+      </div>
+      </template>
+
+      <!-- 论文列表界面 -->
+      <template v-if="showPaperList">
       <!-- 中间：推荐论文列表 -->
       <main class="main-content" :style="{ width: mainWidth + 'px' }">
         <header class="main-header">
@@ -311,48 +546,77 @@ const nextTick = () => new Promise(resolve => setTimeout(resolve, 10))
           <span class="header-subtitle">根据您的研究领域智能推送</span>
         </header>
 
-        <div class="papers-list">
-          <div
-            v-for="paper in recommendedPapers"
-            :key="paper.id"
-            class="paper-card"
-            :class="{ selected: selectedIds.includes(paper.id) }"
-          >
-            <div class="paper-main">
-              <div class="paper-title-row" @click="toggleSelect(paper.id)">
-                <h3 class="paper-title">{{ paper.title }}</h3>
-                <span
-                  class="expand-btn"
-                  :class="{ expanded: expandedPapers.includes(paper.id) }"
-                  @click.stop="toggleExpand(paper.id)"
-                >▼</span>
-              </div>
-              <div class="paper-tags">
-                <span v-for="tag in paper.keywords" :key="tag" class="tag">{{ tag }}</span>
-              </div>
-              <p :class="['paper-abstract', { expanded: expandedPapers.includes(paper.id) }]">
-                {{ paper.abstract }}
-              </p>
-              <div v-if="paper.deadline" class="paper-deadline">
-                <span class="deadline-icon">⏰</span>
-                截止日期: {{ paper.deadline }}
-              </div>
-            </div>
-            <div class="paper-checkbox" @click.stop="toggleSelect(paper.id)">
-              <input type="checkbox" :value="paper.id" v-model="selectedIds" />
-            </div>
+        <!-- 没有推荐时显示中间推荐区域 -->
+        <div v-if="recommendedPapers.length === 0" class="recommend-center">
+          <div class="recommend-content">
+            <div class="recommend-icon">📚</div>
+            <h3>还没有为您推荐论文</h3>
+            <p class="recommend-hint">和大模型聊天，推荐会更精准哦</p>
+            <button
+              @click="recommendPapers"
+              :disabled="isRecommending"
+              class="confirm-btn recommend-btn"
+            >
+              {{ isRecommending ? '推荐中...' : '推荐审稿' }}
+            </button>
+            <p v-if="isRecommending" class="recommend-tip">
+              一大波论文正在赶来...
+            </p>
           </div>
         </div>
 
-        <footer class="main-footer">
-          <button
-            @click="confirmReview"
-            :disabled="selectedIds.length === 0"
-            class="confirm-btn"
-          >
-            确认审稿 (已选 {{ selectedIds.length }})
-          </button>
-        </footer>
+        <!-- 有推荐论文时显示列表 -->
+        <template v-else>
+          <div class="papers-list">
+            <div
+              v-for="paper in recommendedPapers"
+              :key="paper.id"
+              class="paper-card"
+              :class="{ selected: selectedIds.includes(paper.id) }"
+            >
+              <div class="paper-main">
+                <div class="paper-title-row" @click="toggleSelect(paper.id)">
+                  <h3 class="paper-title">{{ paper.title }}</h3>
+                  <span
+                    class="expand-btn"
+                    :class="{ expanded: expandedPapers.includes(paper.id) }"
+                    @click.stop="toggleExpand(paper.id)"
+                  >▼</span>
+                </div>
+                <div class="paper-tags">
+                  <span v-for="tag in paper.keywords" :key="tag" class="tag">{{ tag }}</span>
+                </div>
+                <p :class="['paper-abstract', { expanded: expandedPapers.includes(paper.id) }]">
+                  {{ paper.abstract }}
+                </p>
+                <div v-if="paper.deadline" class="paper-deadline">
+                  <span class="deadline-icon">⏰</span>
+                  截止日期: {{ paper.deadline }}
+                </div>
+              </div>
+              <div class="paper-checkbox" @click.stop="toggleSelect(paper.id)">
+                <input type="checkbox" :value="paper.id" v-model="selectedIds" />
+              </div>
+            </div>
+          </div>
+
+          <footer class="main-footer">
+            <button
+              @click="recommendPapers"
+              :disabled="isRecommending"
+              class="rerommend-btn"
+            >
+              {{ isRecommending ? '重新推荐中...' : '重新推荐' }}
+            </button>
+            <button
+              @click="confirmReview"
+              :disabled="selectedIds.length === 0"
+              class="confirm-btn"
+            >
+              确认审稿 (已选 {{ selectedIds.length }})
+            </button>
+          </footer>
+        </template>
       </main>
 
       <!-- 右侧：我的审稿 -->
@@ -377,7 +641,7 @@ const nextTick = () => new Promise(resolve => setTimeout(resolve, 10))
             v-for="paper in filteredMyPapers"
             :key="paper.id"
             class="my-paper-card"
-            @click="enterReviewMode(paper)"
+            @click="enterReviewMode(paper, rightTab === 'completed')"
           >
             <h4 class="my-paper-title">{{ paper.title }}</h4>
             <div class="paper-tags">
@@ -390,6 +654,7 @@ const nextTick = () => new Promise(resolve => setTimeout(resolve, 10))
           </div>
         </div>
       </aside>
+      </template>
     </div>
   </div>
 </template>
@@ -407,6 +672,114 @@ const nextTick = () => new Promise(resolve => setTimeout(resolve, 10))
   display: flex;
   width: 100%;
   height: 100%;
+}
+
+/* 欢迎界面样式 */
+.welcome-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+}
+
+.welcome-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+  padding: 48px;
+  max-width: 480px;
+  text-align: center;
+}
+
+.welcome-icon {
+  margin-bottom: 24px;
+}
+
+.welcome-icon svg {
+  color: #10a37f;
+}
+
+.welcome-title {
+  font-size: 24px;
+  font-weight: bold;
+  color: #1f2937;
+  margin: 0 0 16px 0;
+}
+
+.welcome-text {
+  color: #6b7280;
+  font-size: 16px;
+  margin: 0 0 32px 0;
+  line-height: 1.6;
+}
+
+.welcome-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
+
+.later-message {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.98);
+  z-index: 100;
+  width: 100%;
+  height: 100%;
+}
+
+.later-message-card {
+  text-align: center;
+  padding: 32px 48px;
+}
+
+.later-message-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.later-message-text {
+  font-size: 18px;
+  color: #4b5563;
+}
+
+.try-review-btn {
+  padding: 14px 32px;
+  background: #10a37f;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.try-review-btn:hover {
+  background: #0d8a6d;
+}
+
+.later-btn {
+  padding: 14px 32px;
+  background: #f3f4f6;
+  color: #374151;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.later-btn:hover {
+  background: #e5e7eb;
 }
 
 .main-content {
@@ -440,6 +813,35 @@ const nextTick = () => new Promise(resolve => setTimeout(resolve, 10))
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.recommend-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.recommend-content {
+  text-align: center;
+  padding: 40px;
+}
+
+.recommend-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.recommend-content h3 {
+  font-size: 20px;
+  color: #1f2937;
+  margin: 0 0 12px 0;
+}
+
+.recommend-hint {
+  color: #6b7280;
+  font-size: 14px;
+  margin: 0 0 24px 0;
 }
 
 .paper-card {
@@ -558,6 +960,7 @@ const nextTick = () => new Promise(resolve => setTimeout(resolve, 10))
   cursor: pointer;
   font-size: 16px;
   transition: background 0.2s;
+  width: 100%;
 }
 
 .confirm-btn:hover:not(:disabled) {
@@ -567,6 +970,52 @@ const nextTick = () => new Promise(resolve => setTimeout(resolve, 10))
 .confirm-btn:disabled {
   background: #444;
   cursor: not-allowed;
+}
+
+.recommend-btn {
+  background: #7c3aed;
+}
+
+.recommend-btn:hover:not(:disabled) {
+  background: #6d28d9;
+}
+
+.recommend-tip {
+  text-align: center;
+  color: #9ca3af;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+.rerommend-btn {
+  padding: 10px 20px;
+  background: #6b7280;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.rerommend-btn:hover:not(:disabled) {
+  background: #4b5563;
+}
+
+.rerommend-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.main-footer {
+  display: flex;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid rgba(231, 237, 245, 0.95);
+}
+
+.main-footer .confirm-btn {
+  flex: 1;
 }
 
 .main-right {
@@ -720,12 +1169,18 @@ const nextTick = () => new Promise(resolve => setTimeout(resolve, 10))
 .panel-content {
   flex: 1;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .pdf-frame {
   width: 100%;
   height: 100%;
   border: none;
+}
+
+.pdf-frame.no-pointer {
+  pointer-events: none;
 }
 
 .no-pdf {
@@ -883,6 +1338,7 @@ const nextTick = () => new Promise(resolve => setTimeout(resolve, 10))
 
 /* 审稿右侧 */
 .paper-info {
+  flex-shrink: 0;
   padding: 16px;
   background: #4f6bff10;
   border-radius: 8px;
@@ -906,7 +1362,11 @@ const nextTick = () => new Promise(resolve => setTimeout(resolve, 10))
 }
 
 .review-section {
+  flex: 1;
   padding: 16px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .review-label {
@@ -914,9 +1374,11 @@ const nextTick = () => new Promise(resolve => setTimeout(resolve, 10))
   font-size: 14px;
   margin-bottom: 12px;
   font-weight: 500;
+  flex-shrink: 0;
 }
 
 .review-textarea {
+  flex: 1;
   width: 100%;
   padding: 12px;
   border: 1px solid #444;
@@ -927,11 +1389,79 @@ const nextTick = () => new Promise(resolve => setTimeout(resolve, 10))
   font-family: monospace;
   resize: none;
   line-height: 1.6;
+  min-height: 200px;
 }
 
 .review-textarea:focus {
   outline: none;
   border-color: #4f6bff;
+}
+
+/* 审稿结论选项 */
+.review-options {
+  flex-shrink: 0;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+  margin: 0 16px 16px 16px;
+}
+
+.review-options-label {
+  color: #374151;
+  font-size: 14px;
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+.review-options-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.review-option-btn {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #6b7280;
+}
+
+.review-option-btn:hover:not(.disabled) {
+  background: #f3f4f6;
+}
+
+.review-option-btn.active.accept {
+  background: #10b981;
+  border-color: #10b981;
+  color: #ffffff;
+}
+
+.review-option-btn.active.minor {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #ffffff;
+}
+
+.review-option-btn.active.major {
+  background: #f97316;
+  border-color: #f97316;
+  color: #ffffff;
+}
+
+.review-option-btn.active.reject {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: #ffffff;
+}
+
+.review-option-btn.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .panel-footer {
@@ -941,6 +1471,7 @@ const nextTick = () => new Promise(resolve => setTimeout(resolve, 10))
   gap: 12px;
 }
 
+.generate-btn,
 .export-btn,
 .submit-btn {
   flex: 1;
@@ -949,6 +1480,21 @@ const nextTick = () => new Promise(resolve => setTimeout(resolve, 10))
   cursor: pointer;
   font-size: 14px;
   transition: background 0.2s;
+}
+
+.generate-btn {
+  background: #4f46e5;
+  border: none;
+  color: #ffffff;
+}
+
+.generate-btn:hover:not(:disabled) {
+  background: #4338ca;
+}
+
+.generate-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .export-btn {
@@ -988,30 +1534,16 @@ const nextTick = () => new Promise(resolve => setTimeout(resolve, 10))
 
 /* 拖动条 */
 .resize-handle {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 4px;
+  width: 6px;
+  background: #e5e7eb;
   cursor: col-resize;
-  background: transparent;
   transition: background 0.2s;
-  z-index: 10;
+  flex-shrink: 0;
+  user-select: none;
 }
 
 .resize-handle:hover {
   background: #4f6bff;
-}
-
-.panel-left .resize-handle {
-  right: 0;
-}
-
-.panel-middle .resize-handle {
-  right: 0;
-}
-
-.main-content .resize-handle {
-  right: 0;
 }
 
 /* 弹窗 */

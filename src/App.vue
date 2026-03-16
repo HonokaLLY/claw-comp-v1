@@ -20,7 +20,7 @@ const closeRightPanel = () => {
     <main class="main-content">
       <router-view />
     </main>
-    <div v-show="showRightPanel" class="right-panel">
+    <div v-if="showRightPanel" class="right-panel">
       <ChatPanel :is-floating="true" @close="closeRightPanel" />
     </div>
   </div>
