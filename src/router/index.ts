@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import CommunityView from '../views/CommunityView.vue'
 import SkillsView from '../views/SkillsView.vue'
+import SkillDetail from '../views/SkillDetail.vue'
 import ReviewView from '../views/ReviewView.vue'
 
 const router = createRouter({
@@ -19,6 +20,11 @@ const router = createRouter({
       path: '/skills',
       name: 'skills',
       component: SkillsView
+    },
+    {
+      path: '/skills/:id',
+      name: 'skill-detail',
+      component: SkillDetail
     },
     {
       path: '/review',

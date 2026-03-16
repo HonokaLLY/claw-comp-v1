@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 interface Skill {
   id: number
@@ -13,9 +16,6 @@ interface Skill {
 }
 
 const showUploadDialog = ref(false)
-const showPreviewDialog = ref(false)
-const previewContent = ref('')
-const previewTitle = ref('')
 
 const newSkill = ref({
   name: '',
@@ -178,15 +178,138 @@ onMounted(async () => {
   try {
     const res = await fetch('/skills/index.json')
     const data = await res.json()
-    // 将字符串 id 转换为数字
-    skills.value = data.map((s: any) => ({
-      ...s,
-      id: Number(s.id)
-    }))
+    // 将数据转换为统一的Skill格式
+    skills.value = await transformSkillsData(data)
   } catch (error) {
     console.error('加载Skills失败:', error)
   }
 })
+
+// 转换skills数据到统一格式
+async function transformSkillsData(rawData: any[]): Promise<Skill[]> {
+  const seenIds = new Set<number>()
+  const skillsList: Skill[] = []
+
+  for (const item of rawData) {
+    // 处理重复ID（如id=8有多个版本）
+    let id = Number(item.id)
+    if (seenIds.has(id)) {
+      // 为重复ID生成新ID（基于内容哈希）
+      const hash = await hashString(JSON.stringify(item))
+      id = 10000 + (hash % 1000)
+    }
+    seenIds.add(id)
+
+    // 根据不同的数据格式提取字段
+    const name = item.displayName || item.name || '未命名Skill'
+    const description = item.description || '无描述'
+
+    // 旧数据可能没有这些字段，设置默认值
+    const icon = item.icon || getDefaultIcon(item.category || item.name)
+    const category = item.category || getDefaultCategory(item.name, description)
+    const author = item.author || item.owner || '未知'
+    const downloads = item.downloads || 0
+
+    // 尝试读取skill文件内容
+    let content = item.content || ''
+    if (!content && item.file) {
+      // 尝试从文件读取（需要知道技能目录，假设在数字目录下）
+      const skillDir = item.id.toString()
+      try {
+        const filePath = `/skills/${skillDir}/${item.file}`
+        const response = await fetch(filePath)
+        if (response.ok) {
+          content = await response.text()
+        }
+      } catch (error) {
+        console.warn(`无法读取skill内容 ${item.id}:`, error)
+      }
+    }
+
+    skillsList.push({
+      id,
+      name,
+      description,
+      icon,
+      category,
+      author,
+      downloads,
+      content
+    })
+  }
+
+  return skillsList
+}
+
+// 简单哈希函数
+async function hashString(str: string): Promise<number> {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash = hash & hash
+  }
+  return Math.abs(hash)
+}
+
+// 根据分类或名称获取默认图标
+function getDefaultIcon(categoryOrName: string | undefined | null): string {
+  if (!categoryOrName) {
+    // 默认返回第一个图标
+    return '⚡'
+  }
+
+  const iconMap: Record<string, string> = {
+    '开发': '⚡',
+    '测试': '🧪',
+    '文档': '📄',
+    '安全': '🔒',
+    '优化': '🚀',
+    '工具': '🔧',
+    'conatus': '🧠',
+    'order': '🛒',
+    'github': '🐙',
+    'gog': '📧',
+    'ontology': '🔗',
+    'proactive-agent': '🚀',
+    'summarize': '📝',
+    'nano-pdf': '📄',
+    'find-skills': '🔍'
+  }
+
+  const searchString = categoryOrName.toLowerCase()
+  for (const [key, icon] of Object.entries(iconMap)) {
+    if (searchString.includes(key.toLowerCase())) {
+      return icon
+    }
+  }
+
+  // 默认图标列表
+  const defaultIcons = ['⚡', '🔍', '🐛', '🧪', '📄', '🔧', '🔒', '🌍', '💡', '🎯', '🚀']
+  const hash = categoryOrName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+  return defaultIcons[hash % defaultIcons.length]
+}
+
+// 根据名称和描述推断分类
+function getDefaultCategory(name: string, description: string): string {
+  const categoryPatterns: Record<string, string[]> = {
+    '开发': ['代码', '编程', '开发', 'bug', 'fix', 'review', 'refactor', 'github'],
+    '测试': ['测试', 'test', '单元测试', '集成测试'],
+    '文档': ['文档', 'doc', '注释', 'comment', 'markdown', 'pdf'],
+    '安全': ['安全', 'security', '漏洞', '扫描', 'audit', '防护'],
+    '优化': ['性能', '优化', 'perf', 'speed', '加速'],
+    '工具': ['工具', 'tool', '实用', 'utility', '翻译', 'summarize', 'find']
+  }
+
+  const text = (name + ' ' + description).toLowerCase()
+  for (const [category, patterns] of Object.entries(categoryPatterns)) {
+    if (patterns.some(pattern => text.includes(pattern.toLowerCase()))) {
+      return category
+    }
+  }
+
+  return '工具' // 默认分类
+}
 
 const filteredSkills = computed(() => {
   let result = skills.value
@@ -268,10 +391,9 @@ const downloadSkill = (skill: Skill) => {
   URL.revokeObjectURL(url)
 }
 
-const previewSkill = (skill: Skill) => {
-  previewTitle.value = skill.name
-  previewContent.value = skill.content
-  showPreviewDialog.value = true
+const viewSkillDetail = (skill: Skill) => {
+  // 跳转到技能详情页
+  router.push(`/skills/${skill.id}`)
 }
 </script>
 
@@ -322,8 +444,8 @@ const previewSkill = (skill: Skill) => {
           </div>
         </div>
         <div class="skill-actions">
-          <button class="preview-btn" @click="previewSkill(skill)">
-            查看
+          <button class="preview-btn" @click="viewSkillDetail(skill)">
+            查看详情
           </button>
           <button class="download-btn" @click="downloadSkill(skill)">
             下载
@@ -388,21 +510,6 @@ const previewSkill = (skill: Skill) => {
       </div>
     </div>
 
-    <!-- 预览对话框 -->
-    <div v-if="showPreviewDialog" class="dialog-overlay" @click.self="showPreviewDialog = false">
-      <div class="dialog dialog-large">
-        <div class="dialog-header">
-          <h3>{{ previewTitle }} - skill.md</h3>
-          <button class="close-btn" @click="showPreviewDialog = false">×</button>
-        </div>
-        <div class="dialog-body">
-          <pre class="markdown-content">{{ previewContent }}</pre>
-        </div>
-        <div class="dialog-footer">
-          <button class="cancel-btn" @click="showPreviewDialog = false">关闭</button>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -649,12 +756,6 @@ const previewSkill = (skill: Skill) => {
   box-shadow: 0 20px 40px rgba(31, 41, 55, 0.2);
 }
 
-.dialog-large {
-  max-width: 800px;
-  max-height: 80vh;
-  display: flex;
-  flex-direction: column;
-}
 
 .dialog-header {
   display: flex;
@@ -690,10 +791,6 @@ const previewSkill = (skill: Skill) => {
   overflow-y: auto;
 }
 
-.dialog-large .dialog-body {
-  flex: 1;
-  max-height: 60vh;
-}
 
 .form-group {
   margin-bottom: 20px;
@@ -825,18 +922,6 @@ const previewSkill = (skill: Skill) => {
   font-weight: 500;
 }
 
-.markdown-content {
-  background: #f9fafb;
-  padding: 20px;
-  border-radius: 14px;
-  color: #374151;
-  font-size: 14px;
-  line-height: 1.7;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  overflow-x: auto;
-  border: 1px solid #e5e7eb;
-}
 
 .dialog-footer {
   display: flex;
@@ -846,9 +931,6 @@ const previewSkill = (skill: Skill) => {
   background: #f9fafb;
 }
 
-.dialog-large .dialog-footer {
-  flex-shrink: 0;
-}
 
 .cancel-btn,
 .submit-btn {

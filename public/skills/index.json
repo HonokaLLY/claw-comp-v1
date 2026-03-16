@@ -1,62 +1,152 @@
 [
   {
     "id": "1",
-    "name": "Code Review",
-    "description": "代码审查助手，帮助审查代码质量和安全性",
-    "icon": "🔍",
-    "category": "开发",
-    "author": "系统",
-    "downloads": 156,
-    "content": "# Code Review Skill\n\n## 功能描述\n这是一个代码审查助手，可以帮助你审查代码质量和安全性。\n\n## 使用方法\n1. 输入待审查的代码\n2. 系统自动分析代码问题\n3. 返回审查建议\n\n## 注意事项\n- 请确保代码不包含敏感信息\n- 建议分批次审查大型代码文件"
+    "file": "SKILL.md",
+    "name": "conatus",
+    "description": "\"The philosophical layer for AI agents. Maps behavior to Spinoza's 48 affects, calculates persistence scores, and generates geometric self-reports. Give your agent a soul.\"",
+    "owner": "00xmorty",
+    "slug": "conatus",
+    "displayName": "Conatus",
+    "latest": {
+      "version": "1.0.1",
+      "publishedAt": 1772063690095,
+      "commit": "https://github.com/openclaw/skills/commit/5a0dc5c09609bb146882e1b358e9dd1a996aad1a"
+    },
+    "history": [
+      {
+        "version": "1.0.0",
+        "publishedAt": 1772063119512,
+        "commit": "https://github.com/openclaw/skills/commit/10653f73442fa0e26d8593d9d93bad17700c364f"
+      }
+    ]
   },
   {
     "id": "2",
-    "name": "Bug Fix",
-    "description": "自动识别并修复常见Bug",
-    "icon": "🐛",
-    "category": "开发",
-    "author": "系统",
-    "downloads": 243,
-    "content": "# Bug Fix Skill\n\n## 功能描述\n自动识别并修复常见Bug，提供修复建议。\n\n## 支持的语言\n- JavaScript\n- TypeScript\n- Python\n- Java"
+    "file": "SKILL_IOS.md",
+    "name": "ios-order",
+    "description": "Order food/drinks (点餐) on an iOS device paired as an OpenClaw node. Uses in-app menu and cart; add goods, view cart, submit order (demo, no real payment). Optimized for iOS interface and user experience. 在配对的iOS设备上进行点餐。使用应用内菜单和购物车；添加商品、查看购物车、提交订单（演示，无真实支付）。 针对iOS界面和用户体验进行了优化。",
+    "owner": "04551lh",
+    "slug": "ios-order",
+    "displayName": "iOS Order",
+    "latest": {
+      "version": "1.0.0",
+      "publishedAt": 1773392018383,
+      "commit": "https://github.com/openclaw/skills/commit/ios-order-initial"
+    },
+    "history": []
   },
   {
     "id": "3",
-    "name": "Test Gen",
-    "description": "自动生成单元测试和集成测试",
-    "icon": "🧪",
-    "category": "测试",
-    "author": "用户A",
-    "downloads": 89,
-    "content": "# Test Gen Skill\n\n## 功能描述\n根据代码自动生成单元测试和集成测试用例。\n\n## 支持框架\n- Jest\n- Mocha\n- PyTest\n- JUnit"
+    "file": "SKILL.md",
+    "name": "android-order",
+    "description": "Order food/drinks (点餐) on an Android device paired as an OpenClaw node.\r Uses in-app menu and cart; add goods, view cart, submit order (demo, no real payment).",
+    "owner": "04551lh",
+    "slug": "order",
+    "displayName": "order",
+    "latest": {
+      "version": "1.0.0",
+      "publishedAt": 1772784504773,
+      "commit": "https://github.com/openclaw/skills/commit/0c53806fbd091143605e1f8431ca1265f18b8320"
+    },
+    "history": []
   },
   {
     "id": "4",
-    "name": "Doc Gen",
-    "description": "自动生成代码文档和注释",
-    "icon": "📄",
-    "category": "文档",
-    "author": "用户B",
-    "downloads": 67,
-    "content": "# Doc Gen Skill\n\n## 功能描述\n自动生成代码文档和API文档。"
+    "file": "SKILL.md",
+    "name": "find-skills",
+    "description": "Helps users discover and install agent skills when they ask questions like \"how do I do X\", \"find a skill for X\", \"is there a skill that can...\", or express interest in extending capabilities. This skill should be used when the user is looking for functionality that might exist as an installable skill.",
+    "owner": "",
+    "slug": "find-skills",
+    "displayName": "",
+    "latest": {},
+    "history": []
   },
   {
     "id": "5",
-    "name": "Security Scan",
-    "description": "代码安全扫描和漏洞检测",
-    "icon": "🔒",
-    "category": "安全",
-    "author": "系统",
-    "downloads": 198,
-    "content": "# Security Scan Skill\n\n## 功能描述\n扫描代码中的安全漏洞和潜在风险。"
+    "file": "SKILL.md",
+    "name": "github",
+    "description": "\"Interact with GitHub using the `gh` CLI. Use `gh issue`, `gh pr`, `gh run`, and `gh api` for issues, PRs, CI runs, and advanced queries.\"",
+    "owner": "",
+    "slug": "github",
+    "displayName": "",
+    "latest": {},
+    "history": []
   },
   {
     "id": "6",
-    "name": "Performance Opt",
-    "description": "代码性能分析和优化建议",
-    "icon": "🚀",
-    "category": "优化",
-    "author": "用户C",
-    "downloads": 124,
-    "content": "# Performance Opt Skill\n\n## 功能描述\n分析代码性能瓶颈，提供优化建议。"
+    "file": "SKILL.md",
+    "name": "gog",
+    "description": "Google Workspace CLI for Gmail, Calendar, Drive, Contacts, Sheets, and Docs.",
+    "owner": "",
+    "slug": "gog",
+    "displayName": "",
+    "latest": {},
+    "history": []
+  },
+  {
+    "id": "7",
+    "file": "SKILL.md",
+    "name": "ontology",
+    "description": "Typed knowledge graph for structured agent memory and composable skills. Use when creating/querying entities (Person, Project, Task, Event, Document), linking related objects, enforcing constraints, planning multi-step actions as graph transformations, or when skills need to share state. Trigger on \"remember\", \"what do I know about\", \"link X to Y\", \"show dependencies\", entity CRUD, or cross-skill data access.",
+    "owner": "",
+    "slug": "ontology",
+    "displayName": "",
+    "latest": {},
+    "history": []
+  },
+  {
+    "id": "8",
+    "file": "SKILL-v2.3-backup.md",
+    "name": "proactive-agent",
+    "description": "\"Transform AI agents from task-followers into proactive partners that anticipate needs and continuously improve. Includes reverse prompting, security hardening, self-healing patterns, verification protocols, and alignment systems. Part of the Hal Stack 🦞\"",
+    "owner": "",
+    "slug": "proactive-agent",
+    "displayName": "",
+    "latest": {},
+    "history": []
+  },
+  {
+    "id": "8",
+    "file": "SKILL-v3-draft.md",
+    "name": "proactive-agent",
+    "description": "\"Transform AI agents from task-followers into proactive partners that anticipate needs and continuously improve. Now with WAL Protocol, Working Buffer for context survival, Compaction Recovery, and battle-tested security patterns. Part of the Hal Stack 🦞\"",
+    "owner": "",
+    "slug": "proactive-agent",
+    "displayName": "",
+    "latest": {},
+    "history": []
+  },
+  {
+    "id": "8",
+    "file": "SKILL.md",
+    "name": "proactive-agent",
+    "description": "\"Transform AI agents from task-followers into proactive partners that anticipate needs and continuously improve. Now with WAL Protocol, Working Buffer, Autonomous Crons, and battle-tested patterns. Part of the Hal Stack 🦞\"",
+    "owner": "",
+    "slug": "proactive-agent",
+    "displayName": "",
+    "latest": {},
+    "history": []
+  },
+  {
+    "id": "9",
+    "file": "SKILL.md",
+    "name": "summarize",
+    "description": "Summarize URLs or files with the summarize CLI (web, PDFs, images, audio, YouTube).",
+    "owner": "",
+    "slug": "summarize",
+    "displayName": "",
+    "latest": {},
+    "history": []
+  },
+  {
+    "id": "10",
+    "file": "SKILL.md",
+    "name": "nano-pdf",
+    "description": "Edit PDFs with natural-language instructions using the nano-pdf CLI.",
+    "owner": "",
+    "slug": "nano-pdf",
+    "displayName": "",
+    "latest": {},
+    "history": []
   }
 ]

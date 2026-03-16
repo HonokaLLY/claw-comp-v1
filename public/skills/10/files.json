@@ -1,0 +1,12 @@
+[
+  {
+    "name": "_meta.json",
+    "type": "json",
+    "path": "_meta.json"
+  },
+  {
+    "name": "SKILL.md",
+    "type": "markdown",
+    "path": "SKILL.md"
+  }
+]

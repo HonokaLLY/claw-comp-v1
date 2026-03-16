@@ -1,0 +1,41 @@
+[
+  {
+    "name": "references",
+    "type": "directory",
+    "path": "references",
+    "children": [
+      {
+        "name": "queries.md",
+        "type": "markdown",
+        "path": "references/queries.md"
+      },
+      {
+        "name": "schema.md",
+        "type": "markdown",
+        "path": "references/schema.md"
+      }
+    ]
+  },
+  {
+    "name": "scripts",
+    "type": "directory",
+    "path": "scripts",
+    "children": [
+      {
+        "name": "ontology.py",
+        "type": "python",
+        "path": "scripts/ontology.py"
+      }
+    ]
+  },
+  {
+    "name": "_meta.json",
+    "type": "json",
+    "path": "_meta.json"
+  },
+  {
+    "name": "SKILL.md",
+    "type": "markdown",
+    "path": "SKILL.md"
+  }
+]
