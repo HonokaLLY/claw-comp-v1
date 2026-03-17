@@ -1,12 +1,47 @@
 [
   {
-    "name": "_meta.json",
-    "type": "json",
-    "path": "_meta.json"
+    "name": "SKILL.md",
+    "path": "SKILL.md",
+    "type": "markdown"
   },
   {
-    "name": "SKILL.md",
-    "type": "markdown",
-    "path": "SKILL.md"
+    "name": "_meta.json",
+    "path": "_meta.json",
+    "type": "json"
+  },
+  {
+    "name": "by-age.md",
+    "path": "by-age.md",
+    "type": "markdown"
+  },
+  {
+    "name": "curriculum.md",
+    "path": "curriculum.md",
+    "type": "markdown"
+  },
+  {
+    "name": "exams.md",
+    "path": "exams.md",
+    "type": "markdown"
+  },
+  {
+    "name": "motivation.md",
+    "path": "motivation.md",
+    "type": "markdown"
+  },
+  {
+    "name": "parents.md",
+    "path": "parents.md",
+    "type": "markdown"
+  },
+  {
+    "name": "safety.md",
+    "path": "safety.md",
+    "type": "markdown"
+  },
+  {
+    "name": "tutoring.md",
+    "path": "tutoring.md",
+    "type": "markdown"
   }
 ]

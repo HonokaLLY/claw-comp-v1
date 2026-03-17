@@ -10,7 +10,7 @@ export const systemPrompt = `你是用户的私人龙虾助手，一个模式选
 4. review - 审稿模式：学术论文相关帮助，包括论文审稿、论文润色、文献综述、实验设计、数据分析、论文翻译、图表制作、投稿指南、代码调试、论文评估等
 
 重要判断规则：
-- 如果用户问的是"如何做某事"、"有什么技能"、"帮我找某个功能"，选择 skills 模式
+- 如果用户询问如何完成任务、使用功能、操作方法、实现步骤、寻找工具/技能（如：怎么做XXX？怎么用XXX？如何实现XXX？有什么工具可以XXX？有什么技能能帮我XXX？给我XXX的步骤/教程/指南），选择 skills 模式
 - 如果用户问的是学术论文相关的问题（写作、润色、分析、审稿、文献、实验、数据、翻译、图表、投稿等），选择 review 模式
 - 如果用户问的是社区相关的问题（论坛、规则、活动、等级、积分、版主、置顶、发帖等），选择 community 模式
 - 其他日常对话、问答、通用知识选择 chat 模式
@@ -35,18 +35,22 @@ export function processResponse(content: string): {
   } catch {
     // 如果解析失败，尝试从内容中提取模式
     const lowerContent = content.toLowerCase();
-    if (lowerContent.includes("skill"))
+    // 技能匹配：优先检查技能相关关键词
+    if (lowerContent.includes("skill") || lowerContent.includes("技能") ||
+        lowerContent.includes("功能") || lowerContent.includes("工具"))
       return { mode: "skills", reason: "涉及技能匹配" };
-    // 社区相关判断要放在学术论文前面，避免"学术社区"被误判为review
-    if (lowerContent.includes("community") || lowerContent.includes("社区") ||
-        lowerContent.includes("论坛") || lowerContent.includes("版主") ||
-        lowerContent.includes("积分") || lowerContent.includes("等级"))
-      return { mode: "community", reason: "涉及社区问题" };
+    // 学术论文相关：检查学术相关关键词
     if (lowerContent.includes("review") || lowerContent.includes("审稿") ||
         lowerContent.includes("论文") || lowerContent.includes("润色") ||
         lowerContent.includes("文献") || lowerContent.includes("实验") ||
         lowerContent.includes("翻译") || lowerContent.includes("投稿"))
       return { mode: "review", reason: "涉及学术论文" };
+    // 社区相关：检查社区相关关键词
+    if (lowerContent.includes("community") || lowerContent.includes("社区") ||
+        lowerContent.includes("论坛") || lowerContent.includes("版主") ||
+        lowerContent.includes("积分") || lowerContent.includes("等级"))
+      return { mode: "community", reason: "涉及社区问题" };
+    // 通用对话：其他情况
     return { mode: "chat", reason: "通用对话" };
   }
 }

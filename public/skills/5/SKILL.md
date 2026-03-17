@@ -1,47 +1,39 @@
 ---
-name: github
-description: "Interact with GitHub using the `gh` CLI. Use `gh issue`, `gh pr`, `gh run`, and `gh api` for issues, PRs, CI runs, and advanced queries."
+name: Flashcard
+description: "Spaced repetition study tool with deck management. Create flashcard decks, add question-answer pairs, study with prioritized review (weakest cards first), track correct and wrong answers, view mastery progress, and manage multiple subject decks. Learn anything more efficiently."
+version: "2.0.0"
+author: "BytesAgain"
+tags: ["flashcard","study","learning","spaced-repetition","education","memory","quiz","anki"]
+categories: ["Education", "Productivity", "Personal Management"]
 ---
 
-# GitHub Skill
+# Flashcard
 
-Use the `gh` CLI to interact with GitHub. Always specify `--repo owner/repo` when not in a git directory, or use URLs directly.
+Study smarter with spaced repetition. Cards you struggle with come up more often.
 
-## Pull Requests
+## Commands
 
-Check CI status on a PR:
-```bash
-gh pr checks 55 --repo owner/repo
-```
+- `create <deck>` — Create a new flashcard deck
+- `add <deck> <front> <back>` — Add a card to a deck
+- `study <deck>` — Study weakest cards first
+- `correct <deck>` — Mark current card as correct
+- `wrong <deck>` — Mark current card as wrong (will repeat sooner)
+- `decks` — List all decks with card counts
+- `stats` — Overall study statistics
+- `help` — Show commands
 
-List recent workflow runs:
-```bash
-gh run list --repo owner/repo --limit 10
-```
-
-View a run and see which steps failed:
-```bash
-gh run view <run-id> --repo owner/repo
-```
-
-View logs for failed steps only:
-```bash
-gh run view <run-id> --repo owner/repo --log-failed
-```
-
-## API for Advanced Queries
-
-The `gh api` command is useful for accessing data not available through other subcommands.
-
-Get PR with specific fields:
-```bash
-gh api repos/owner/repo/pulls/55 --jq '.title, .state, .user.login'
-```
-
-## JSON Output
-
-Most commands support `--json` for structured output.  You can use `--jq` to filter:
+## Usage Examples
 
 ```bash
-gh issue list --repo owner/repo --json number,title --jq '.[] | "\(.number): \(.title)"'
+flashcard create Spanish
+flashcard add Spanish "hola" "hello"
+flashcard add Spanish "gracias" "thank you"
+flashcard study Spanish
+flashcard correct Spanish
+flashcard decks
+flashcard stats
 ```
+
+---
+💬 Feedback & Feature Requests: https://bytesagain.com/feedback
+Powered by BytesAgain | bytesagain.com

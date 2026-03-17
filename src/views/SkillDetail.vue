@@ -149,8 +149,76 @@ interface SkillItem {
   history?: any[]
 }
 
+// 技能名称和描述的中文映射
+const skillChineseMap: Record<string, { name: string, description: string }> = {
+  'Curriculum Generator': {
+    name: '📚 课程生成器',
+    description: '智能教育课程生成系统，具有严格的步骤执行和人工升级策略'
+  },
+  'Education': {
+    name: '🎓 教育',
+    description: '生成学习计划、测验、闪卡和复习清单，按主题跟踪学习进度'
+  },
+  'EduClaw IELTS Planner': {
+    name: '📅 IELTS学习秘书',
+    description: '详细的雅思学习计划，通过gcalcli安排Google日历，自动化学习材料管理'
+  },
+  'Error Analysis': {
+    name: '📊 错题分析',
+    description: '分析错误原因、知识点定位、举一反三出变式题'
+  },
+  'Flashcard': {
+    name: '🔁 闪卡',
+    description: '带有间隔重复的学习工具，管理闪卡组，优先复习最弱卡片'
+  },
+  'Learning Coach': {
+    name: '👨‍🏫 学习教练',
+    description: '个性化、多学科学习计划，主动提醒，策划资源，LLM生成测验'
+  },
+  'Medicine': {
+    name: '🏥 医学',
+    description: '支持从患者教育到临床实践和研究的医学理解'
+  },
+  'Quizlet': {
+    name: '📝 Quizlet学习集',
+    description: '构建高收益的Quizlet学习集，调整学习和测试会话，通过间隔重复诊断改进弱卡'
+  },
+  'School': {
+    name: '🏫 学校',
+    description: '面向K-12学生的AI教育，家长控制，按年龄自适应学习，作业帮助，考试准备'
+  },
+  'Study': {
+    name: '📖 学习',
+    description: '结构化学习会话，管理材料，使用主动回忆技术准备考试'
+  },
+  'Study Buddy': {
+    name: '🧑‍🤝‍🧑 学习伙伴',
+    description: '创建个性化学习计划，跟踪进度，提供反馈的AI学习伴侣'
+  },
+  'Study Buddy AI': {
+    name: '🤖 学习伙伴AI',
+    description: '22功能AI学习助手，闪卡、测验、间隔重复、番茄钟定时器、学习计划器'
+  },
+  'Study Habits': {
+    name: '📅 学习习惯',
+    description: '通过间隔重复、主动回忆和会话跟踪建立有效的学习习惯'
+  },
+  'Study Plan': {
+    name: '📋 学习计划',
+    description: '学习计划生成器，考研计划、考证规划、每日学习、番茄钟'
+  },
+  'Study Revision Planner': {
+    name: '🗓️ 复习计划',
+    description: '将教学大纲、考试范围或课程笔记转换为复习日历'
+  },
+  'Study Tutor': {
+    name: '👨‍🏫 学习导师',
+    description: '基于科学的学习辅导技能，涵盖学前诊断、教师准备、预习、笔记、复习、间隔重复'
+  }
+}
+
 const route = useRoute()
-const skillId = ref<string | string[]>(route.params.id)
+const skillId = ref<string>((route.params.id as string) || '')
 
 const loading = ref(true)
 const error = ref<string | null>(null)
@@ -248,13 +316,13 @@ function updateSkillInfo(fileName: string | null = null) {
 
   // 查找匹配的技能条目
   let matchedSkills = skillIndex.value.filter(
-    skill => skill.id === skillId.value && (!fileName || skill.file === fileName)
+    skill => String(skill.id) === skillId.value && (!fileName || skill.file === fileName)
   )
 
   if (matchedSkills.length === 0) {
     // 如果没有找到精确匹配的文件名，且fileName不是.md文件，则查找该技能ID的所有技能
     if (fileName && !fileName.endsWith('.md')) {
-      matchedSkills = skillIndex.value.filter(skill => skill.id === skillId.value)
+      matchedSkills = skillIndex.value.filter(skill => String(skill.id) === skillId.value)
     } else {
       return
     }
@@ -270,8 +338,12 @@ function updateSkillInfo(fileName: string | null = null) {
   })
 
   const skill = matchedSkills[0]
+  if (!skill) return
 
-  skillName.value = skill.name
+  // 使用中文映射获取技能名称
+  const displayName = skill.displayName || skill.name
+  const chineseMapping = skillChineseMap[displayName]
+  skillName.value = chineseMapping ? chineseMapping.name : displayName
   skillOwner.value = skill.owner || '未知作者'
   skillSlug.value = skill.slug || ''
   skillVersion.value = skill.latest?.version || '未版本化'
@@ -318,6 +390,12 @@ function getFileIcon(fileType: string): string {
     css: '🎨',
     html: '🌐',
     shell: '🐚',
+    bash: '🐚',
+    sh: '🐚',
+    sql: '🗃️',
+    yaml: '📋',
+    yml: '📋',
+    txt: '📄',
     text: '📄',
     directory: '📁'
   }
@@ -400,7 +478,7 @@ async function selectFile(file: FileItem) {
     text = text.replace(/^---[\s\S]*?---\n*/, '')
 
     if (file.type === 'markdown') {
-      renderedContent.value = marked(text)
+      renderedContent.value = await marked.parse(text)
     } else if (file.type === 'json') {
       try {
         const jsonObj = JSON.parse(text)
@@ -420,8 +498,10 @@ onMounted(loadFileList)
 
 // 监听路由参数变化（如果同一个组件内切换技能）
 watch(() => route.params.id, async (newId) => {
-  if (newId && newId !== skillId.value) {
-    skillId.value = newId
+  if (!newId) return
+  const id = Array.isArray(newId) ? newId[0] : newId
+  if (id && id !== skillId.value) {
+    skillId.value = id
     await loadFileList()
   }
 })

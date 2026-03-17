@@ -25,152 +25,11 @@ const newSkill = ref({
   content: ''
 })
 
-const skills = ref<Skill[]>([
-  {
-    id: 1,
-    name: 'Code Review',
-    description: '代码审查助手，帮助审查代码质量和安全性',
-    icon: '🔍',
-    category: '开发',
-    author: '系统',
-    downloads: 156,
-    content: `# Code Review Skill
-
-## 功能描述
-这是一个代码审查助手，可以帮助你审查代码质量和安全性。
-
-## 使用方法
-1. 输入待审查的代码
-2. 系统自动分析代码问题
-3. 返回审查建议
-
-## 示例
-\`\`\`python
-def hello():
-    print("Hello World")
-\`\`\`
-
-## 注意事项
-- 请确保代码不包含敏感信息
-- 建议分批次审查大型代码文件`
-  },
-  {
-    id: 2,
-    name: 'Bug Fix',
-    description: '自动识别并修复常见Bug',
-    icon: '🐛',
-    category: '开发',
-    author: '系统',
-    downloads: 243,
-    content: `# Bug Fix Skill
-
-## 功能描述
-自动识别并修复常见Bug，提供修复建议。
-
-## 支持的语言
-- JavaScript
-- TypeScript
-- Python
-- Java
-
-## 使用示例
-输入有问题的代码，系统会自动分析并给出修复方案。`
-  },
-  {
-    id: 3,
-    name: 'Test Gen',
-    description: '自动生成单元测试和集成测试',
-    icon: '🧪',
-    category: '测试',
-    author: '用户A',
-    downloads: 89,
-    content: `# Test Gen Skill
-
-## 功能描述
-根据代码自动生成单元测试和集成测试用例。
-
-## 支持框架
-- Jest
-- Mocha
-- PyTest
-- JUnit`
-  },
-  {
-    id: 4,
-    name: 'Doc Gen',
-    description: '自动生成代码文档和注释',
-    icon: '📄',
-    category: '文档',
-    author: '用户B',
-    downloads: 67,
-    content: `# Doc Gen Skill
-
-## 功能描述
-自动生成代码文档和注释，支持多种文档格式。`
-  },
-  {
-    id: 5,
-    name: 'Refactor',
-    description: '智能代码重构建议',
-    icon: '🔧',
-    category: '开发',
-    author: '系统',
-    downloads: 198,
-    content: `# Refactor Skill
-
-## 功能描述
-提供智能代码重构建议，优化代码结构。`
-  },
-  {
-    id: 6,
-    name: 'Security Scan',
-    description: '安全漏洞扫描和修复建议',
-    icon: '🔒',
-    category: '安全',
-    author: '用户C',
-    downloads: 312,
-    content: `# Security Scan Skill
-
-## 功能描述
-扫描代码中的安全漏洞并提供修复建议。
-
-## 检查项目
-- SQL注入
-- XSS攻击
-- 权限验证
-- 敏感信息泄露`
-  },
-  {
-    id: 7,
-    name: 'Perf Opt',
-    description: '性能优化建议',
-    icon: '⚡',
-    category: '优化',
-    author: '系统',
-    downloads: 145,
-    content: `# Perf Opt Skill
-
-## 功能描述
-分析代码性能，提供优化建议。`
-  },
-  {
-    id: 8,
-    name: 'Translate',
-    description: '多语言翻译支持',
-    icon: '🌍',
-    category: '工具',
-    author: '用户D',
-    downloads: 76,
-    content: `# Translate Skill
-
-## 功能描述
-支持多语言翻译功能。`
-  }
-])
+const skills = ref<Skill[]>([])
 
 const selectedCategory = ref('全部')
 const searchKeyword = ref('')
-const categories = ['全部', '开发', '测试', '文档', '安全', '优化', '工具']
+const categories = ['全部', '开发', '测试', '文档', '安全', '优化', '工具', '教育']
 const icons = ['⚡', '🔍', '🐛', '🧪', '📄', '🔧', '🔒', '🌍', '💡', '🎯', '🚀']
 
 // 从 JSON 文件加载 skills 数据
@@ -184,6 +43,74 @@ onMounted(async () => {
     console.error('加载Skills失败:', error)
   }
 })
+
+// 技能名称和描述的中文映射
+const skillChineseMap: Record<string, { name: string, description: string }> = {
+  'Curriculum Generator': {
+    name: '📚 课程生成器',
+    description: '智能教育课程生成系统，具有严格的步骤执行和人工升级策略'
+  },
+  'Education': {
+    name: '🎓 教育',
+    description: '生成学习计划、测验、闪卡和复习清单，按主题跟踪学习进度'
+  },
+  'EduClaw IELTS Planner': {
+    name: '📅 IELTS学习秘书',
+    description: '详细的雅思学习计划，通过gcalcli安排Google日历，自动化学习材料管理'
+  },
+  'Error Analysis': {
+    name: '📊 错题分析',
+    description: '分析错误原因、知识点定位、举一反三出变式题'
+  },
+  'Flashcard': {
+    name: '🔁 闪卡',
+    description: '带有间隔重复的学习工具，管理闪卡组，优先复习最弱卡片'
+  },
+  'Learning Coach': {
+    name: '👨‍🏫 学习教练',
+    description: '个性化、多学科学习计划，主动提醒，策划资源，LLM生成测验'
+  },
+  'Medicine': {
+    name: '🏥 医学',
+    description: '支持从患者教育到临床实践和研究的医学理解'
+  },
+  'Quizlet': {
+    name: '📝 Quizlet学习集',
+    description: '构建高收益的Quizlet学习集，调整学习和测试会话，通过间隔重复诊断改进弱卡'
+  },
+  'School': {
+    name: '🏫 学校',
+    description: '面向K-12学生的AI教育，家长控制，按年龄自适应学习，作业帮助，考试准备'
+  },
+  'Study': {
+    name: '📖 学习',
+    description: '结构化学习会话，管理材料，使用主动回忆技术准备考试'
+  },
+  'Study Buddy': {
+    name: '🧑‍🤝‍🧑 学习伙伴',
+    description: '创建个性化学习计划，跟踪进度，提供反馈的AI学习伴侣'
+  },
+  'Study Buddy AI': {
+    name: '🤖 学习伙伴AI',
+    description: '22功能AI学习助手，闪卡、测验、间隔重复、番茄钟定时器、学习计划器'
+  },
+  'Study Habits': {
+    name: '📅 学习习惯',
+    description: '通过间隔重复、主动回忆和会话跟踪建立有效的学习习惯'
+  },
+  'Study Plan': {
+    name: '📋 学习计划',
+    description: '学习计划生成器，考研计划、考证规划、每日学习、番茄钟'
+  },
+  'Study Revision Planner': {
+    name: '🗓️ 复习计划',
+    description: '将教学大纲、考试范围或课程笔记转换为复习日历'
+  },
+  'Study Tutor': {
+    name: '👨‍🏫 学习导师',
+    description: '基于科学的学习辅导技能，涵盖学前诊断、教师准备、预习、笔记、复习、间隔重复'
+  }
+}
 
 // 转换skills数据到统一格式
 async function transformSkillsData(rawData: any[]): Promise<Skill[]> {
@@ -201,12 +128,17 @@ async function transformSkillsData(rawData: any[]): Promise<Skill[]> {
     seenIds.add(id)
 
     // 根据不同的数据格式提取字段
-    const name = item.displayName || item.name || '未命名Skill'
-    const description = item.description || '无描述'
+    const displayName = item.displayName || item.name || '未命名Skill'
+    const originalDescription = item.description || '无描述'
+
+    // 使用中文映射替换标题和描述
+    const chineseMapping = skillChineseMap[displayName]
+    const name = chineseMapping ? chineseMapping.name : displayName
+    const description = chineseMapping ? chineseMapping.description : originalDescription
 
     // 旧数据可能没有这些字段，设置默认值
-    const icon = item.icon || getDefaultIcon(item.category || item.name)
-    const category = item.category || getDefaultCategory(item.name, description)
+    const category = item.category || getDefaultCategory(name, description)
+    const icon = item.icon || getDefaultIcon(category || name)
     const author = item.author || item.owner || '未知'
     const downloads = item.downloads || 0
 
@@ -259,6 +191,9 @@ function getDefaultIcon(categoryOrName: string | undefined | null): string {
     return '⚡'
   }
 
+  // 此时 categoryOrName 一定是 string
+  const name = categoryOrName as string
+
   const iconMap: Record<string, string> = {
     '开发': '⚡',
     '测试': '🧪',
@@ -266,6 +201,7 @@ function getDefaultIcon(categoryOrName: string | undefined | null): string {
     '安全': '🔒',
     '优化': '🚀',
     '工具': '🔧',
+    '教育': '🎓',
     'conatus': '🧠',
     'order': '🛒',
     'github': '🐙',
@@ -274,10 +210,19 @@ function getDefaultIcon(categoryOrName: string | undefined | null): string {
     'proactive-agent': '🚀',
     'summarize': '📝',
     'nano-pdf': '📄',
-    'find-skills': '🔍'
+    'find-skills': '🔍',
+    'curriculum': '📚',
+    'learning': '🧠',
+    'study': '📖',
+    'school': '🏫',
+    'tutor': '👨‍🏫',
+    'quiz': '📝',
+    'flashcard': '🔁',
+    'medicine': '🏥',
+    'coach': '👨‍🏫'
   }
 
-  const searchString = categoryOrName.toLowerCase()
+  const searchString = name.toLowerCase()
   for (const [key, icon] of Object.entries(iconMap)) {
     if (searchString.includes(key.toLowerCase())) {
       return icon
@@ -285,20 +230,21 @@ function getDefaultIcon(categoryOrName: string | undefined | null): string {
   }
 
   // 默认图标列表
-  const defaultIcons = ['⚡', '🔍', '🐛', '🧪', '📄', '🔧', '🔒', '🌍', '💡', '🎯', '🚀']
-  const hash = categoryOrName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
-  return defaultIcons[hash % defaultIcons.length]
+  const defaultIcons = ['⚡', '🔍', '🐛', '🧪', '📄', '🔧', '🔒', '🌍', '💡', '🎯', '🚀', '🎓', '📚', '🧠', '📖', '🏫']
+  const hash = Math.abs(name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0))
+  return defaultIcons[hash % defaultIcons.length]!
 }
 
 // 根据名称和描述推断分类
 function getDefaultCategory(name: string, description: string): string {
   const categoryPatterns: Record<string, string[]> = {
-    '开发': ['代码', '编程', '开发', 'bug', 'fix', 'review', 'refactor', 'github'],
+    '开发': ['代码', '编程', '开发', 'bug', 'fix', 'review', 'refactor', 'github', 'conatus', 'proactive-agent', 'ontology'],
     '测试': ['测试', 'test', '单元测试', '集成测试'],
-    '文档': ['文档', 'doc', '注释', 'comment', 'markdown', 'pdf'],
+    '文档': ['文档', 'doc', '注释', 'comment', 'markdown', 'pdf', 'summarize', 'nano-pdf'],
     '安全': ['安全', 'security', '漏洞', '扫描', 'audit', '防护'],
     '优化': ['性能', '优化', 'perf', 'speed', '加速'],
-    '工具': ['工具', 'tool', '实用', 'utility', '翻译', 'summarize', 'find']
+    '工具': ['工具', 'tool', '实用', 'utility', '翻译', 'find', 'order', '点餐', 'ios', 'android'],
+    '教育': ['教育', '学习', 'study', 'learning', '课程', 'curriculum', '教学', 'teacher', '学生', 'school', '学校', 'quiz', '测验', 'flashcard', '闪卡', 'tutor', '辅导', 'coach', '教练', 'medicine', '医学', 'ielts', '雅思', 'exam', '考试', '复习', 'revision', 'habits', '习惯', 'buddy', '伙伴', 'error-analysis', '错题分析']
   }
 
   const text = (name + ' ' + description).toLowerCase()

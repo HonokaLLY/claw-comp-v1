@@ -1,12 +1,17 @@
 [
   {
-    "name": "_meta.json",
-    "type": "json",
-    "path": "_meta.json"
+    "name": "README.md",
+    "path": "README.md",
+    "type": "markdown"
   },
   {
     "name": "SKILL.md",
-    "type": "markdown",
-    "path": "SKILL.md"
+    "path": "SKILL.md",
+    "type": "markdown"
+  },
+  {
+    "name": "_meta.json",
+    "path": "_meta.json",
+    "type": "json"
   }
 ]

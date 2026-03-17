@@ -1,93 +1,42 @@
 [
   {
-    "name": "assets",
-    "type": "directory",
-    "path": "assets",
-    "children": [
-      {
-        "name": "AGENTS.md",
-        "type": "markdown",
-        "path": "assets/AGENTS.md"
-      },
-      {
-        "name": "HEARTBEAT.md",
-        "type": "markdown",
-        "path": "assets/HEARTBEAT.md"
-      },
-      {
-        "name": "MEMORY.md",
-        "type": "markdown",
-        "path": "assets/MEMORY.md"
-      },
-      {
-        "name": "ONBOARDING.md",
-        "type": "markdown",
-        "path": "assets/ONBOARDING.md"
-      },
-      {
-        "name": "SOUL.md",
-        "type": "markdown",
-        "path": "assets/SOUL.md"
-      },
-      {
-        "name": "TOOLS.md",
-        "type": "markdown",
-        "path": "assets/TOOLS.md"
-      },
-      {
-        "name": "USER.md",
-        "type": "markdown",
-        "path": "assets/USER.md"
-      }
-    ]
-  },
-  {
-    "name": "references",
-    "type": "directory",
-    "path": "references",
-    "children": [
-      {
-        "name": "onboarding-flow.md",
-        "type": "markdown",
-        "path": "references/onboarding-flow.md"
-      },
-      {
-        "name": "security-patterns.md",
-        "type": "markdown",
-        "path": "references/security-patterns.md"
-      }
-    ]
-  },
-  {
-    "name": "scripts",
-    "type": "directory",
-    "path": "scripts",
-    "children": [
-      {
-        "name": "security-audit.sh",
-        "type": "shell",
-        "path": "scripts/security-audit.sh"
-      }
-    ]
+    "name": "SKILL.md",
+    "path": "SKILL.md",
+    "type": "markdown"
   },
   {
     "name": "_meta.json",
-    "type": "json",
-    "path": "_meta.json"
+    "path": "_meta.json",
+    "type": "json"
   },
   {
-    "name": "SKILL-v2.3-backup.md",
-    "type": "markdown",
-    "path": "SKILL-v2.3-backup.md"
+    "name": "diagnostics.md",
+    "path": "diagnostics.md",
+    "type": "markdown"
   },
   {
-    "name": "SKILL-v3-draft.md",
-    "type": "markdown",
-    "path": "SKILL-v3-draft.md"
+    "name": "imports.md",
+    "path": "imports.md",
+    "type": "markdown"
   },
   {
-    "name": "SKILL.md",
-    "type": "markdown",
-    "path": "SKILL.md"
+    "name": "memory-template.md",
+    "path": "memory-template.md",
+    "type": "markdown"
+  },
+  {
+    "name": "set-design.md",
+    "path": "set-design.md",
+    "type": "markdown"
+  },
+  {
+    "name": "setup.md",
+    "path": "setup.md",
+    "type": "markdown"
+  },
+  {
+    "name": "study-modes.md",
+    "path": "study-modes.md",
+    "type": "markdown"
   }
 ]

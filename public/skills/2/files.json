@@ -1,12 +1,24 @@
 [
   {
-    "name": "_meta_ios.json",
-    "type": "json",
-    "path": "_meta_ios.json"
+    "name": "SKILL.md",
+    "path": "SKILL.md",
+    "type": "markdown"
   },
   {
-    "name": "SKILL_IOS.md",
-    "type": "markdown",
-    "path": "SKILL_IOS.md"
+    "name": "_meta.json",
+    "path": "_meta.json",
+    "type": "json"
+  },
+  {
+    "name": "scripts",
+    "path": "scripts",
+    "type": "directory",
+    "children": [
+      {
+        "name": "script.sh",
+        "path": "scripts/script.sh",
+        "type": "shell"
+      }
+    ]
   }
 ]

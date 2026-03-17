@@ -1,12 +1,141 @@
 [
   {
-    "name": "_meta.json",
-    "type": "json",
-    "path": "_meta.json"
+    "name": "SKILL.md",
+    "path": "SKILL.md",
+    "type": "markdown"
   },
   {
-    "name": "SKILL.md",
-    "type": "markdown",
-    "path": "SKILL.md"
+    "name": "_meta.json",
+    "path": "_meta.json",
+    "type": "json"
+  },
+  {
+    "name": "references",
+    "path": "references",
+    "type": "directory",
+    "children": [
+      {
+        "name": "cron-templates.md",
+        "path": "references/cron-templates.md",
+        "type": "markdown"
+      },
+      {
+        "name": "grading-schema.md",
+        "path": "references/grading-schema.md",
+        "type": "markdown"
+      },
+      {
+        "name": "intervention-policy.md",
+        "path": "references/intervention-policy.md",
+        "type": "markdown"
+      },
+      {
+        "name": "learning-methods.md",
+        "path": "references/learning-methods.md",
+        "type": "markdown"
+      },
+      {
+        "name": "progress-model.md",
+        "path": "references/progress-model.md",
+        "type": "markdown"
+      },
+      {
+        "name": "quiz-schema.md",
+        "path": "references/quiz-schema.md",
+        "type": "markdown"
+      },
+      {
+        "name": "report-schema.md",
+        "path": "references/report-schema.md",
+        "type": "markdown"
+      },
+      {
+        "name": "scoring-rubric.md",
+        "path": "references/scoring-rubric.md",
+        "type": "markdown"
+      },
+      {
+        "name": "source-ingestion.md",
+        "path": "references/source-ingestion.md",
+        "type": "markdown"
+      },
+      {
+        "name": "source-quality.md",
+        "path": "references/source-quality.md",
+        "type": "markdown"
+      }
+    ]
+  },
+  {
+    "name": "scripts",
+    "path": "scripts",
+    "type": "directory",
+    "children": [
+      {
+        "name": "bootstrap.py",
+        "path": "scripts/bootstrap.py",
+        "type": "python"
+      },
+      {
+        "name": "build_quiz.py",
+        "path": "scripts/build_quiz.py",
+        "type": "python"
+      },
+      {
+        "name": "discover_content.py",
+        "path": "scripts/discover_content.py",
+        "type": "python"
+      },
+      {
+        "name": "grade_quiz.py",
+        "path": "scripts/grade_quiz.py",
+        "type": "python"
+      },
+      {
+        "name": "intervention_rules.py",
+        "path": "scripts/intervention_rules.py",
+        "type": "python"
+      },
+      {
+        "name": "setup_cron.py",
+        "path": "scripts/setup_cron.py",
+        "type": "python"
+      },
+      {
+        "name": "source_ingest.py",
+        "path": "scripts/source_ingest.py",
+        "type": "python"
+      },
+      {
+        "name": "subject_cron.py",
+        "path": "scripts/subject_cron.py",
+        "type": "python"
+      },
+      {
+        "name": "subject_store.py",
+        "path": "scripts/subject_store.py",
+        "type": "python"
+      },
+      {
+        "name": "update_progress.py",
+        "path": "scripts/update_progress.py",
+        "type": "python"
+      },
+      {
+        "name": "validate_grading_json.py",
+        "path": "scripts/validate_grading_json.py",
+        "type": "python"
+      },
+      {
+        "name": "validate_quiz_json.py",
+        "path": "scripts/validate_quiz_json.py",
+        "type": "python"
+      },
+      {
+        "name": "weekly_report.py",
+        "path": "scripts/weekly_report.py",
+        "type": "python"
+      }
+    ]
   }
 ]
