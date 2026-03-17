@@ -79,9 +79,39 @@ const loadHistory = async () => {
     const res = await fetch('/api/chat-history/list')
     if (res.ok) {
       chatHistory.value = await res.json()
+      // 如果没有历史记录，自动创建一个默认会话
+      if (chatHistory.value.length === 0) {
+        await createDefaultSession()
+      }
     }
   } catch (e) {
     console.log('加载历史记录失败', e)
+  }
+}
+
+// 创建默认会话
+const createDefaultSession = async () => {
+  const defaultSession: ChatSession = {
+    id: String(Date.now()),
+    title: '新对话',
+    messages: [
+      { id: 1, role: 'assistant' as const, content: '你好！我是AI助手，有什么可以帮助你的吗？' }
+    ],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+
+  try {
+    await fetch('/api/chat-history/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(defaultSession)
+    })
+    currentSessionId.value = defaultSession.id
+    messages.value = defaultSession.messages
+    chatHistory.value = [defaultSession]
+  } catch (e) {
+    console.log('创建默认会话失败', e)
   }
 }
 
@@ -603,10 +633,15 @@ const sendMessage = async () => {
       }
     )
 
-    // 流式输出完成，标记结束
+    // 流式输出完成，标记结束并格式化
     const msgIndex = messages.value.findIndex(m => m.id === aiMsgId)
     if (msgIndex > -1) {
       messages.value[msgIndex].isStreaming = false
+      // 流式完成后，再次处理内容（确保格式统一）
+      const finalContent = messages.value[msgIndex].content
+      const formattedContent = processResponses[selectedMode](finalContent)
+      messages.value[msgIndex].content = formattedContent
+      messages.value[msgIndex].content = formattedContent
     }
   } catch (error) {
     console.error('对话出错:', error)
