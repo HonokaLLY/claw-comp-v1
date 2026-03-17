@@ -6,6 +6,7 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 
 // 支持的模式
 const MODES = ['chat', 'community', 'skills', 'review']
+const PAPERS_FILE = './data/papers.json'
 
 // 获取模式对应的文件夹
 function getModeDir(mode: string): string {
@@ -22,12 +23,75 @@ function ensureModeDirs() {
   })
 }
 
+function ensurePapersFile() {
+  const dir = './data'
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true })
+  }
+  if (!existsSync(PAPERS_FILE)) {
+    writeFileSync(PAPERS_FILE, JSON.stringify({ items: [] }, null, 2))
+  }
+}
+
 // 保存聊天记录到文件的 API 插件
 const chatStoragePlugin = {
   name: 'chat-storage',
   configureServer(server) {
     // 初始化时创建文件夹
     ensureModeDirs()
+    ensurePapersFile()
+
+    server.middlewares.use('/api/papers', async (req, res) => {
+      res.setHeader('Access-Control-Allow-Origin', '*')
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+
+      if (req.method === 'OPTIONS') {
+        res.writeHead(200)
+        res.end()
+        return
+      }
+
+      const url = req.url || '/'
+      const action = url.split('/').filter(Boolean)[0] || 'list'
+
+      if (req.method === 'GET' && action === 'list') {
+        try {
+          ensurePapersFile()
+          const raw = readFileSync(PAPERS_FILE, 'utf-8')
+          const json = JSON.parse(raw || '{}')
+          const items = Array.isArray(json?.items) ? json.items : []
+          res.writeHead(200, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ items }))
+        } catch (err) {
+          res.writeHead(500, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ error: (err as Error).message }))
+        }
+        return
+      }
+
+      if (req.method === 'POST' && action === 'save') {
+        let body = ''
+        req.on('data', (chunk: string) => body += chunk)
+        req.on('end', () => {
+          try {
+            ensurePapersFile()
+            const payload = JSON.parse(body || '{}')
+            const items = Array.isArray(payload) ? payload : (payload.items || [])
+            writeFileSync(PAPERS_FILE, JSON.stringify({ items }, null, 2))
+            res.writeHead(200, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ success: true }))
+          } catch (err) {
+            res.writeHead(500, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ error: (err as Error).message }))
+          }
+        })
+        return
+      }
+
+      res.writeHead(404, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ error: 'Not Found' }))
+    })
 
     server.middlewares.use('/api/chat', async (req, res) => {
       // 设置 CORS

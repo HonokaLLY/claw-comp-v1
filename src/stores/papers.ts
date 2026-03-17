@@ -3,15 +3,26 @@ import { ref } from 'vue'
 import { mockPapers } from '@/data/papersMock'
 import type { PaperItem, PaperAttachment, PaperComment } from '@/types/paper'
 
-const STORAGE_KEY = 'papers_feed_v2'
+const PAPERS_LIST_API = '/api/papers/list'
+const PAPERS_SAVE_API = '/api/papers/save'
 
-const loadFromStorage = (): PaperItem[] | null => {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) as PaperItem[] : null
-  } catch (error) {
-    console.warn('[papers] 读取本地数据失败，将使用 mock 数据', error)
-    return null
+const normalizeAvatar = (avatar?: string, role?: 'human' | 'agent') => {
+  if (avatar && /^(https?:|data:)/i.test(avatar)) return avatar
+  if (role === 'agent') return 'https://i.pravatar.cc/40?img=12'
+  return avatar || 'https://i.pravatar.cc/40?img=8'
+}
+
+const normalizePaper = (paper: PaperItem): PaperItem => {
+  const fallbackTs = paper.submittedDate ? new Date(paper.submittedDate).getTime() : Date.now()
+  return {
+    ...paper,
+    publishedAt: paper.publishedAt ?? fallbackTs,
+    isUserCreated: paper.isUserCreated ?? false,
+    comments: (paper.comments ?? []).map(comment => ({
+      ...comment,
+      avatar: normalizeAvatar(comment.avatar, comment.authorRole)
+    })),
+    tags: paper.tags ?? []
   }
 }
 
@@ -19,19 +30,40 @@ export const usePapersStore = defineStore('papers', () => {
   const papers = ref<PaperItem[]>([])
   const loading = ref(false)
 
-  const persist = () => {
+  const persist = async () => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(papers.value))
+      await fetch(PAPERS_SAVE_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: papers.value })
+      })
     } catch (error) {
-      console.warn('[papers] 持久化失败', error)
+      console.warn('[papers] 保存 JSON 失败', error)
+    }
+  }
+
+  const loadFromFile = async (): Promise<PaperItem[] | null> => {
+    try {
+      const res = await fetch(PAPERS_LIST_API)
+      if (!res.ok) return null
+      const data = await res.json()
+      const items = (data?.items || []) as PaperItem[]
+      return items.map(normalizePaper)
+    } catch (error) {
+      console.warn('[papers] 读取 JSON 失败', error)
+      return null
     }
   }
 
   const bootstrap = async () => {
     loading.value = true
-    const saved = loadFromStorage()
-    papers.value = saved && saved.length ? saved : [...mockPapers]
-    persist()
+    const fromFile = await loadFromFile()
+    if (fromFile && fromFile.length) {
+      papers.value = fromFile
+    } else {
+      papers.value = mockPapers.map(normalizePaper)
+      await persist()
+    }
     loading.value = false
   }
 
@@ -39,21 +71,19 @@ export const usePapersStore = defineStore('papers', () => {
 
   const toggleLike = (paperId: string) => {
     const paper = findPaper(paperId)
-    if (paper) {
-      paper.isLiked = !paper.isLiked
-      paper.likes += paper.isLiked ? 1 : -1
-      if (paper.likes < 0) paper.likes = 0
-      persist()
-    }
+    if (!paper) return
+    paper.isLiked = !paper.isLiked
+    paper.likes += paper.isLiked ? 1 : -1
+    if (paper.likes < 0) paper.likes = 0
+    void persist()
   }
 
   const likeOnce = (paperId: string) => {
     const paper = findPaper(paperId)
-    if (paper && !paper.isLiked) {
-      paper.isLiked = true
-      paper.likes += 1
-      persist()
-    }
+    if (!paper || paper.isLiked) return
+    paper.isLiked = true
+    paper.likes += 1
+    void persist()
   }
 
   const addComment = (
@@ -80,7 +110,7 @@ export const usePapersStore = defineStore('papers', () => {
     }
     paper.comments.unshift(newComment)
     paper.comments_count += 1
-    persist()
+    void persist()
     return newComment
   }
 
@@ -91,13 +121,17 @@ export const usePapersStore = defineStore('papers', () => {
     tags?: string[]
     attachments?: PaperAttachment[]
   }): PaperItem => {
+    const now = Date.now()
     const paper: PaperItem = {
-      id: `p${Date.now()}`,
+      id: `p${now}`,
       title: payload.title || '未命名论文',
       content: payload.content || '这是一篇新的论文摘要。',
       author: payload.author || '你',
       avatar: 'https://i.pravatar.cc/100?img=5',
       created_at: '刚刚',
+      submittedDate: new Date(now).toISOString().slice(0, 10),
+      publishedAt: now,
+      isUserCreated: true,
       likes: 0,
       comments_count: 0,
       shares: 0,
@@ -107,7 +141,7 @@ export const usePapersStore = defineStore('papers', () => {
       attachments: payload.attachments && payload.attachments.length ? payload.attachments : undefined
     }
     papers.value.unshift(paper)
-    persist()
+    void persist()
     return paper
   }
 

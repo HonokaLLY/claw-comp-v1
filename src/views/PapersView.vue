@@ -122,16 +122,31 @@ const filteredAndSorted = computed(() => {
     )
   }
 
+  const userPriority = (a: typeof result[number], b: typeof result[number]) => {
+    if (a.isUserCreated !== b.isUserCreated) {
+      return a.isUserCreated ? -1 : 1
+    }
+    return (b.publishedAt || 0) - (a.publishedAt || 0)
+  }
+
   if (activeTab.value === 'recommended') {
-    result.sort((a, b) => b.likes - a.likes)
+    result.sort((a, b) => {
+      const p = userPriority(a, b)
+      if (p !== 0) return p
+      return b.likes - a.likes
+    })
   } else if (activeTab.value === 'latest') {
     result.sort((a, b) => {
-      const da = a.submittedDate ? new Date(a.submittedDate).getTime() : 0
-      const db = b.submittedDate ? new Date(b.submittedDate).getTime() : 0
-      return db - da
+      const p = userPriority(a, b)
+      if (p !== 0) return p
+      return (b.publishedAt || 0) - (a.publishedAt || 0)
     })
   } else {
-    result.sort((a, b) => (b.likes + b.comments_count) - (a.likes + a.comments_count))
+    result.sort((a, b) => {
+      const p = userPriority(a, b)
+      if (p !== 0) return p
+      return (b.likes + b.comments_count) - (a.likes + a.comments_count)
+    })
   }
   return result
 })

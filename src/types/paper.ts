@@ -25,6 +25,8 @@ export interface PaperItem {
   submittedDate?: string
   venue?: string
   pdfUrl?: string
+  publishedAt?: number
+  isUserCreated?: boolean
   likes: number
   comments_count: number
   shares: number

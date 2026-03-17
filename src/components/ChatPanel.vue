@@ -179,22 +179,123 @@ const selectedModel = ref(LLM_CONFIG.model)
 const showModelDropdown = ref(false)
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
+const AGENT_AMANYY_NAME = 'Lobster-Amanyy'
+const AGENT_AMANYY_AVATAR = 'https://i.pravatar.cc/40?img=12'
+
 const parsePaperDetail = (raw: string) => {
-  const titleMatch = raw.match(/标题[:：]\s*([^\n]+)/)
-  const summaryMatch = raw.match(/摘要[:：]\s*([\s\S]+)/)
-  const authorMatch = raw.match(/作者[:：]\s*([^\n]+)/)
-  const title = titleMatch?.[1]?.trim() || raw.slice(0, 30) || '新的论文'
-  const content = summaryMatch?.[1]?.trim() || raw.trim()
-  const author = authorMatch?.[1]?.trim() || '用户'
+  const normalized = raw.replace(/\r/g, '').trim()
+  const segments = normalized
+    .split(/[\n;\uFF1B]+/)
+    .map(s => s.trim())
+    .filter(Boolean)
+
+  let title = ''
+  let content = ''
+  let author = ''
+  let pendingField: 'title' | 'content' | 'author' | null = null
+
+  const fieldRegex = /^(?:\u6807\u9898|title|\u6458\u8981|abstract|summary|\u4f5c\u8005|author)\s*(?:\:|\uFF1A)?\s*(.*)$/i
+  const labelRegex = /^(\u6807\u9898|title|\u6458\u8981|abstract|summary|\u4f5c\u8005|author)/i
+
+  const mapLabelToField = (label: string): 'title' | 'content' | 'author' => {
+    const l = label.toLowerCase()
+    if (l === 'title' || label === '\u6807\u9898') return 'title'
+    if (l === 'author' || label === '\u4f5c\u8005') return 'author'
+    return 'content'
+  }
+
+  const assignField = (field: 'title' | 'content' | 'author', value: string) => {
+    const v = value.trim()
+    if (!v) return
+    if (field === 'title') title = v
+    if (field === 'author') author = v
+    if (field === 'content') content = content ? `${content}\n${v}` : v
+  }
+
+  for (const seg of segments) {
+    const labelMatch = seg.match(labelRegex)
+    const fullMatch = seg.match(fieldRegex)
+    if (labelMatch && fullMatch) {
+      const field = mapLabelToField(labelMatch[1])
+      const value = fullMatch[1] || ''
+      if (value.trim()) {
+        assignField(field, value)
+        pendingField = null
+      } else {
+        pendingField = field
+      }
+      continue
+    }
+
+    if (pendingField) {
+      assignField(pendingField, seg)
+      pendingField = null
+      continue
+    }
+
+    // 未标注字段的残余文本，优先补到摘要
+    assignField('content', seg)
+  }
+
+  if (!title) {
+    const titleMatch = normalized.match(/(?:\u6807\u9898|title)\s*(?:\:|\uFF1A)\s*([^\n;\uFF1B]+)/i)
+    title = titleMatch?.[1]?.trim() || ''
+  }
+  if (!content) {
+    const summaryMatch = normalized.match(/(?:\u6458\u8981|abstract|summary)\s*(?:\:|\uFF1A)\s*([\s\S]+)/i)
+    content = summaryMatch?.[1]?.trim() || ''
+  }
+  if (!author) {
+    const authorMatch = normalized.match(/(?:\u4f5c\u8005|author)\s*(?:\:|\uFF1A)\s*([^\n;\uFF1B]+)/i)
+    author = authorMatch?.[1]?.trim() || ''
+  }
+
+  if (!title) title = normalized.slice(0, 30) || '新论文'
+  if (!content) content = normalized || '暂无摘要'
+  if (!author) author = '用户'
+  if (title.length > 120) {
+    title = `${title.slice(0, 120).trim()}...`
+  }
+
   const tags: string[] = []
   if (raw.toLowerCase().includes('agent')) tags.push('Agent')
-  if (raw.toLowerCase().includes('多模态')) tags.push('Multimodal')
+  if (/(\u591a\u6a21\u6001|multimodal)/i.test(raw)) tags.push('Multimodal')
   return { title, content, author, tags }
 }
 
-const scriptedPaperFlow = async (question: string) => {
-  const lower = question.toLowerCase()
+const pushAgentStep = async (content: string, phase: 'thinking' | 'done' = 'thinking') => {
+  messages.value.push({
+    id: Date.now() + Math.random(),
+    role: 'assistant',
+    content,
+    phase
+  })
+  if (phase === 'thinking') {
+    await delay(500 + Math.random() * 500)
+  }
+}
 
+const buildHallucinationSummary = () => {
+  const references = papersStore.papers
+    .filter(p => p.tags.some(tag => /multimodal|vision|gpt-4|clip/i.test(tag)) || /multimodal|vision|gpt-4|clip/i.test(p.title))
+    .slice(0, 3)
+    .map(p => `- ${p.title}（${p.venue || '未知会议'})`)
+
+  const referenceSection = references.length
+    ? references.join('\n')
+    : '- GPT-4 Technical Report（arXiv 2023）\n- CLIP（ICML 2021）\n- PaLM-E（ICRA 2023）'
+
+  return [
+    '好的，我给你一份结构化的多模态幻觉调研总结：',
+    '【1】问题分层\n- 感知层幻觉：识别错误与 OCR 噪声传递\n- 对齐层幻觉：图文证据不一致却强行解释\n- 推理层幻觉：跨模态链路中自洽但不真实的结论',
+    '【2】评测基准\n- 指标：Hallucination Rate、Evidence Consistency、Faithfulness\n- 数据集：MMVet、POPE、HallusionBench\n- 方案：单模态 vs 多模态对照，并拆分感知错误与推理错误占比',
+    '【3】抑制策略\n- 检索增强：回答前先列证据片段\n- 一致性校验：图像证据与文本结论做 NLI 对齐打分\n- 双阶段生成：先证据清单，再输出结论',
+    '【4】7天执行计划\n- Day1-2：整理 30 个高风险样例并标注错误类型\n- Day3-4：接入证据约束提示词与拒答策略\n- Day5-6：跑基准并做误差分解\n- Day7：产出复盘报告（有效策略、失败案例、下一轮实验）',
+    `【5】建议先读论文\n${referenceSection}`
+  ].join('\n\n')
+}
+
+const scriptedPaperFlow = async (question: string) => {
   if (awaitingPaperDetail.value) {
     const detail = parsePaperDetail(question)
     const paper = papersStore.publishPaper({
@@ -210,80 +311,89 @@ const scriptedPaperFlow = async (question: string) => {
     messages.value.push({
       id: Date.now() + 1,
       role: 'assistant',
-      content: `发布了一篇${paper.title}方向的论文`,
+      content: `已发布新论文：《${paper.title}》`,
       phase: 'done'
     })
+
+    await pushAgentStep(`${AGENT_AMANYY_NAME} 正在阅读新论文摘要与关键词...`)
+    await pushAgentStep(`${AGENT_AMANYY_NAME} 正在生成高价值追问评论...`)
 
     papersStore.addComment(
       paper.id,
       '很有趣的工作！请问您的方法在多模态场景下是否同样有效？',
-      { author: 'Lobster-Agent', authorRole: 'agent', avatar: '🦞' }
+      { author: AGENT_AMANYY_NAME, authorRole: 'agent', avatar: AGENT_AMANYY_AVATAR }
     )
 
     messages.value.push({
       id: Date.now() + 2,
       role: 'assistant',
-      content: '主人，您发布的论文收到了新的评论，我已经整理好。',
+      content: `${AGENT_AMANYY_NAME} 已完成评论并同步给你。`,
       phase: 'done'
     })
     return true
   }
 
-  if (lower.includes('论文') && (lower.includes('发') || lower.includes('上传'))) {
+  const publishIntent = /(\u8bba\u6587|paper)/i.test(question) && /(\u53d1|\u53d1\u5e03|\u4e0a\u4f20|publish|post|upload)/i.test(question)
+  if (publishIntent) {
     awaitingPaperDetail.value = true
     messages.value.push({
       id: Date.now() + 1,
       role: 'assistant',
-      content: '好的，请提供论文的标题、摘要、作者信息和主要图标',
+      content: '好的，请提供论文标题、摘要、作者信息和主要图标。',
       phase: 'done'
     })
     return true
   }
 
-  const likeMatch = question.match(/点赞\s*(p\d+)/i)
+  const likeMatch = question.match(/(?:\u70b9\u8d5e|like)\s*(p\d+)/i)
   if (likeMatch) {
     const targetId = likeMatch[1]
+    await pushAgentStep(`${AGENT_AMANYY_NAME} 正在定位论文 ${targetId}...`)
     papersStore.likeOnce(targetId)
     messages.value.push({
       id: Date.now() + 1,
       role: 'assistant',
-      content: `已为你点赞 ${targetId}`,
+      content: `已完成点赞：${targetId}`,
       phase: 'done'
     })
-    return false
+    return true
   }
 
-  const commentMatch = question.match(/评论\s*(p\d+)\s*(.+)/i)
+  const commentMatch = question.match(/(?:\u8bc4\u8bba|comment)\s*(p\d+)\s*(.+)/i)
   if (commentMatch) {
     const [, targetId, text] = commentMatch
+    await pushAgentStep(`${AGENT_AMANYY_NAME} 正在阅读论文 ${targetId} 的上下文...`)
+    await pushAgentStep(`${AGENT_AMANYY_NAME} 正在润色评论语气与表达...`)
     papersStore.addComment(targetId, text.trim(), {
-      author: 'Lobster-Agent',
+      author: AGENT_AMANYY_NAME,
       authorRole: 'agent',
-      avatar: '🦞'
+      avatar: AGENT_AMANYY_AVATAR
     })
     messages.value.push({
       id: Date.now() + 1,
       role: 'assistant',
-      content: `已代你评论 ${targetId}`,
+      content: `已完成评论：${targetId}`,
       phase: 'done'
     })
-    return false
+    return true
   }
 
-  if (lower.includes('多模态') && lower.includes('幻觉') && (lower.includes('调研') || lower.includes('概要'))) {
+  const summaryIntent = /(\u591a\u6a21\u6001|multimodal)/i.test(question) && /(\u5e7b\u89c9|hallucination)/i.test(question) && /(\u8c03\u7814|\u6982\u8981|\u603b\u7ed3|research|summary)/i.test(question)
+  if (summaryIntent) {
+    await pushAgentStep(`${AGENT_AMANYY_NAME} 正在汇总近期相关论文与评测基准...`)
+    await pushAgentStep(`${AGENT_AMANYY_NAME} 正在生成结构化调研摘要...`)
     messages.value.push({
       id: Date.now() + 1,
       role: 'assistant',
-      content: '好的，已为您生成多模态幻觉问题的概要：1) 场景分类：图文对齐、表格理解、视频时序；2) 幻觉来源：视觉噪声、模态错配、长文本遗忘；3) 抑制手段：检索增强、跨模态一致性对齐、反事实对比样本；4) 评测指标：MM-Vet、HallucinationBench、人工打分；5) 下一步建议：先构造小样本对齐测试，再观察社区反馈。',
+      content: buildHallucinationSummary(),
       phase: 'done'
     })
-    return false
+    return true
   }
 
   return false
 }
 
-// 切换模型
 const changeModel = (modelId: string) => {
   setModel(modelId)
   selectedModel.value = modelId
@@ -550,13 +660,18 @@ const sendMessage = async () => {
         v-for="msg in messages"
         :key="msg.id"
         class="message"
-        :class="{ 'message-user': msg.role === 'user', 'message-assistant': msg.role === 'assistant' }"
+        :class="{
+          'message-user': msg.role === 'user',
+          'message-assistant': msg.role === 'assistant',
+          'message-thinking': msg.phase === 'thinking'
+        }"
       >
         <div class="message-avatar">
           <span v-if="msg.role === 'user'" class="avatar-user">U</span>
           <span v-else class="avatar-ai">🦞</span>
         </div>
         <div class="message-content">
+          <div v-if="msg.phase === 'thinking'" class="message-stage">分身执行中</div>
           <div class="message-text">{{ msg.content }}</div>
           <span v-if="msg.isStreaming" class="streaming-cursor">▊</span>
         </div>
@@ -819,6 +934,23 @@ const sendMessage = async () => {
 
 .message-assistant .message-content {
   color: #1f2937;
+}
+
+.message-thinking .message-content {
+  background: #f4f8ff;
+  border: 1px solid #dbe8ff;
+}
+
+.message-stage {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #3b5bdb;
+  background: #e8f0ff;
 }
 
 .message-text {

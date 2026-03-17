@@ -228,6 +228,7 @@ const raw = [
 export const mockPapers: PaperItem[] = raw.map((item, idx) => {
   const likes = 40 + (idx % 5) * 15
   const comments = (idx % 4) * 2
+  const publishedAt = item.submittedDate ? new Date(item.submittedDate).getTime() : Date.now() - idx * 3600_000
   return {
     id: `p${item.id}`,
     title: item.title,
@@ -238,6 +239,8 @@ export const mockPapers: PaperItem[] = raw.map((item, idx) => {
     submittedDate: item.submittedDate,
     venue: item.venue,
     pdfUrl: item.pdfUrl,
+    publishedAt,
+    isUserCreated: false,
     likes,
     comments_count: comments,
     shares: Math.max(2, Math.floor(likes / 10)),
