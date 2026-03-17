@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, watch, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { currentReviewPaper, reviewOpinion, isGeneratingReview, generateReviewOpinion, isInReviewDetail, isInReviewMain, triggerRecommend } from '@/stores/review'
 import api, { AVAILABLE_MODELS, setModel, LLM_CONFIG } from '@/api/openclaw'
 import { systemPrompts, processResponses, selectorPrompt, selectorProcess, getModeType, type ModeType } from '@/prompts'
+import { isInReviewDetail, isInReviewMain, triggerRecommend, currentReviewPaper, reviewOpinion } from '@/stores/review'
 
 const route = useRoute()
 
@@ -143,6 +143,7 @@ interface Message {
     reason: string
     systemPrompt: string
   }
+  isStreaming?: boolean  // 是否正在流式输出
 }
 
 const props = defineProps<{
@@ -207,8 +208,8 @@ const sendMessage = async () => {
   const lowerQuestion = question.toLowerCase()
   const isReviewMain = route.path === '/review' && isInReviewMain.value
   if (isReviewMain && (
-    lowerQuestion.includes('推荐审稿') ||
-    lowerQuestion.includes('推荐论文') ||
+    lowerQuestion.includes('为我推荐今日的审稿论文') ||
+    lowerQuestion.includes('推荐审稿的论文') ||
     lowerQuestion.includes('paper recommendation')
   )) {
     // 添加提示消息
@@ -252,17 +253,35 @@ const sendMessage = async () => {
     lowerQuestion.includes('评审意见') ||
     lowerQuestion.includes('生成审稿')
   )) {
-    // 生成审稿意见
-    const result = await generateReviewOpinion()
+    // 创建空的 AI 消息用于流式显示
+    const aiMsgId = Date.now() + 1
+    let streamingContent = ''
     const aiMsg: Message = {
-      id: Date.now() + 1,
+      id: aiMsgId,
       role: 'assistant',
-      content: result || '生成审稿意见失败，请稍后重试。'
+      content: '',
+      isStreaming: true
     }
     messages.value.push(aiMsg)
-    // 填入审稿意见框
-    if (result) {
-      reviewOpinion.value = result
+
+    // 使用流式 API 生成审稿意见
+    await api.generateReviewStream(
+      currentReviewPaper.value!,
+      (chunk: string) => {
+        streamingContent += chunk
+        // 找到对应的消息并更新内容
+        const msgIndex = messages.value.findIndex(m => m.id === aiMsgId)
+        if (msgIndex > -1) {
+          messages.value[msgIndex].content = streamingContent
+        }
+      }
+    )
+
+    // 流式输出完成，标记结束并填入审稿意见框
+    const msgIndex = messages.value.findIndex(m => m.id === aiMsgId)
+    if (msgIndex > -1) {
+      messages.value[msgIndex].isStreaming = false
+      reviewOpinion.value = streamingContent
     }
     isLoading.value = false
     return
@@ -288,19 +307,9 @@ const sendMessage = async () => {
     console.log('%c[模式选择] 选择的模式: ' + selectedMode, 'color: #10b981; font-weight: bold')
     console.log('[模式选择] 原因:', selectResult.reason)
 
-    // 第二步：使用对应模式的 system prompt 调用大模型回答问题
+    // 第二步：使用对应模式的 system prompt 调用大模型回答问题（流式）
     const modeSystemPrompt = systemPrompts[selectedMode]
     console.log('%c[模式选择] 使用的 System Prompt:', 'color: #3b82f6; font-weight: bold')
-
-    const response = await api.sendChatWithContext(
-      currentReviewPaper.value?.id || 0,
-      question,
-      { reviewMarkdown: reviewOpinion.value },
-      modeSystemPrompt
-    )
-
-    // 使用对应模式的处理函数格式化输出
-    const processedContent = processResponses[selectedMode](response.reply || '')
 
     // 保存模式选择信息到 JSON
     const modeSelectInfo = {
@@ -310,13 +319,41 @@ const sendMessage = async () => {
     }
     console.log('[保存] 模式选择信息:', modeSelectInfo)
 
+    // 创建空的 AI 消息用于流式显示
+    const aiMsgId = Date.now() + 1
+    let streamingContent = ''
     const aiMsg: Message = {
-      id: Date.now() + 1,
+      id: aiMsgId,
       role: 'assistant',
-      content: typeof processedContent === 'string' ? processedContent : response.reply || '抱歉，无法获取回复',
-      modeSelect: modeSelectInfo
+      content: '',
+      modeSelect: modeSelectInfo,
+      isStreaming: true
     }
     messages.value.push(aiMsg)
+
+    // 使用流式 API，每收到一个 chunk 就更新消息
+    await api.sendChatWithContextStream(
+      currentReviewPaper.value?.id || 0,
+      question,
+      { reviewMarkdown: reviewOpinion.value },
+      false,
+      (chunk: string) => {
+        streamingContent += chunk
+        // 找到对应的消息并更新内容
+        const msgIndex = messages.value.findIndex(m => m.id === aiMsgId)
+        if (msgIndex > -1) {
+          // 使用对应模式的处理函数格式化输出
+          const processedContent = processResponses[selectedMode](streamingContent)
+          messages.value[msgIndex].content = typeof processedContent === 'string' ? processedContent : streamingContent
+        }
+      }
+    )
+
+    // 流式输出完成，标记结束
+    const msgIndex = messages.value.findIndex(m => m.id === aiMsgId)
+    if (msgIndex > -1) {
+      messages.value[msgIndex].isStreaming = false
+    }
   } catch (error) {
     console.error('对话出错:', error)
     const aiMsg: Message = {
@@ -377,9 +414,10 @@ const sendMessage = async () => {
         </div>
         <div class="message-content">
           <div class="message-text">{{ msg.content }}</div>
+          <span v-if="msg.isStreaming" class="streaming-cursor">▊</span>
         </div>
       </div>
-      <div v-if="isLoading" class="message message-assistant">
+      <!-- <div v-if="isLoading" class="message message-assistant">
         <div class="message-avatar"><span class="avatar-ai">🦞</span></div>
         <div class="message-content">
           <div class="message-text loading">
@@ -388,7 +426,7 @@ const sendMessage = async () => {
             <span class="dot"></span>
           </div>
         </div>
-      </div>
+      </div> -->
     </div>
     <div class="panel-input">
       <!-- 已上传文件列表 -->
@@ -647,6 +685,20 @@ const sendMessage = async () => {
 .message-text.loading {
   display: flex;
   gap: 4px;
+}
+
+/* 流式输出光标 */
+.streaming-cursor {
+  display: inline-block;
+  margin-left: 2px;
+  color: #4f6bff;
+  font-weight: bold;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
 }
 
 .dot {

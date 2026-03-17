@@ -1384,7 +1384,7 @@ const laterReview = () => {
   border: 1px solid #444;
   border-radius: 8px;
   background: #f5f7fa;
-  color: #ccc;
+  color: #000;
   font-size: 14px;
   font-family: monospace;
   resize: none;
