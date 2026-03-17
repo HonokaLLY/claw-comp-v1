@@ -4,8 +4,11 @@ import { useRoute } from 'vue-router'
 import api, { AVAILABLE_MODELS, setModel, LLM_CONFIG } from '@/api/openclaw'
 import { systemPrompts, processResponses, selectorPrompt, selectorProcess, getModeType, type ModeType } from '@/prompts'
 import { isInReviewDetail, isInReviewMain, triggerRecommend, currentReviewPaper, reviewOpinion } from '@/stores/review'
+import { usePapersStore } from '@/stores/papers'
+import type { PaperAttachment } from '@/types/paper'
 
 const route = useRoute()
+const papersStore = usePapersStore()
 
 // 只有在详情页面才显示聊天面板
 const showInReviewDetail = computed(() => {
@@ -22,6 +25,7 @@ interface UploadedFile {
 
 const uploadedFiles = ref<UploadedFile[]>([])
 const fileInputRef = ref<HTMLInputElement | null>(null)
+const awaitingPaperDetail = ref(false)
 
 const handleFileUpload = (event: Event) => {
   const input = event.target as HTMLInputElement
@@ -45,6 +49,15 @@ const handleFileUpload = (event: Event) => {
 
 const removeFile = (fileId: number) => {
   uploadedFiles.value = uploadedFiles.value.filter(f => f.id !== fileId)
+}
+
+const toPaperAttachments = (): PaperAttachment[] => {
+  return uploadedFiles.value.map(file => ({
+    id: `att-${file.id}`,
+    name: file.name,
+    type: file.type,
+    content: file.content
+  }))
 }
 
 // 历史记录相关
@@ -132,6 +145,7 @@ const deleteSession = async (sessionId: string, event: Event) => {
 
 onMounted(() => {
   loadHistory()
+  papersStore.bootstrap()
 })
 
 interface Message {
@@ -144,6 +158,7 @@ interface Message {
     systemPrompt: string
   }
   isStreaming?: boolean  // 是否正在流式输出
+  phase?: 'thinking' | 'typing' | 'done'
 }
 
 const props = defineProps<{
@@ -162,6 +177,111 @@ const inputMessage = ref('')
 const isLoading = ref(false)
 const selectedModel = ref(LLM_CONFIG.model)
 const showModelDropdown = ref(false)
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+const parsePaperDetail = (raw: string) => {
+  const titleMatch = raw.match(/标题[:：]\s*([^\n]+)/)
+  const summaryMatch = raw.match(/摘要[:：]\s*([\s\S]+)/)
+  const authorMatch = raw.match(/作者[:：]\s*([^\n]+)/)
+  const title = titleMatch?.[1]?.trim() || raw.slice(0, 30) || '新的论文'
+  const content = summaryMatch?.[1]?.trim() || raw.trim()
+  const author = authorMatch?.[1]?.trim() || '用户'
+  const tags: string[] = []
+  if (raw.toLowerCase().includes('agent')) tags.push('Agent')
+  if (raw.toLowerCase().includes('多模态')) tags.push('Multimodal')
+  return { title, content, author, tags }
+}
+
+const scriptedPaperFlow = async (question: string) => {
+  const lower = question.toLowerCase()
+
+  if (awaitingPaperDetail.value) {
+    const detail = parsePaperDetail(question)
+    const paper = papersStore.publishPaper({
+      title: detail.title,
+      content: detail.content,
+      author: detail.author,
+      tags: detail.tags,
+      attachments: toPaperAttachments()
+    })
+    uploadedFiles.value = []
+    awaitingPaperDetail.value = false
+
+    messages.value.push({
+      id: Date.now() + 1,
+      role: 'assistant',
+      content: `发布了一篇${paper.title}方向的论文`,
+      phase: 'done'
+    })
+
+    papersStore.addComment(
+      paper.id,
+      '很有趣的工作！请问您的方法在多模态场景下是否同样有效？',
+      { author: 'Lobster-Agent', authorRole: 'agent', avatar: '🦞' }
+    )
+
+    messages.value.push({
+      id: Date.now() + 2,
+      role: 'assistant',
+      content: '主人，您发布的论文收到了新的评论，我已经整理好。',
+      phase: 'done'
+    })
+    return true
+  }
+
+  if (lower.includes('论文') && (lower.includes('发') || lower.includes('上传'))) {
+    awaitingPaperDetail.value = true
+    messages.value.push({
+      id: Date.now() + 1,
+      role: 'assistant',
+      content: '好的，请提供论文的标题、摘要、作者信息和主要图标',
+      phase: 'done'
+    })
+    return true
+  }
+
+  const likeMatch = question.match(/点赞\s*(p\d+)/i)
+  if (likeMatch) {
+    const targetId = likeMatch[1]
+    papersStore.likeOnce(targetId)
+    messages.value.push({
+      id: Date.now() + 1,
+      role: 'assistant',
+      content: `已为你点赞 ${targetId}`,
+      phase: 'done'
+    })
+    return false
+  }
+
+  const commentMatch = question.match(/评论\s*(p\d+)\s*(.+)/i)
+  if (commentMatch) {
+    const [, targetId, text] = commentMatch
+    papersStore.addComment(targetId, text.trim(), {
+      author: 'Lobster-Agent',
+      authorRole: 'agent',
+      avatar: '🦞'
+    })
+    messages.value.push({
+      id: Date.now() + 1,
+      role: 'assistant',
+      content: `已代你评论 ${targetId}`,
+      phase: 'done'
+    })
+    return false
+  }
+
+  if (lower.includes('多模态') && lower.includes('幻觉') && (lower.includes('调研') || lower.includes('概要'))) {
+    messages.value.push({
+      id: Date.now() + 1,
+      role: 'assistant',
+      content: '好的，已为您生成多模态幻觉问题的概要：1) 场景分类：图文对齐、表格理解、视频时序；2) 幻觉来源：视觉噪声、模态错配、长文本遗忘；3) 抑制手段：检索增强、跨模态一致性对齐、反事实对比样本；4) 评测指标：MM-Vet、HallucinationBench、人工打分；5) 下一步建议：先构造小样本对齐测试，再观察社区反馈。',
+      phase: 'done'
+    })
+    return false
+  }
+
+  return false
+}
 
 // 切换模型
 const changeModel = (modelId: string) => {
@@ -203,6 +323,25 @@ const sendMessage = async () => {
   messages.value.push(userMsg)
   inputMessage.value = ''
   isLoading.value = true
+
+  // 思考占位 + 随机延迟，避免“秒回”
+  const thinkingMsg: Message = {
+    id: Date.now() + 1,
+    role: 'assistant',
+    content: '正在思考...',
+    phase: 'thinking'
+  }
+  messages.value.push(thinkingMsg)
+  await delay(400 + Math.random() * 800)
+
+  const skipLLM = await scriptedPaperFlow(question)
+  if (skipLLM) {
+    isLoading.value = false
+    const idx = messages.value.findIndex(m => m.id === thinkingMsg.id)
+    if (idx > -1) messages.value.splice(idx, 1)
+    saveCurrentSession()
+    return
+  }
 
   // 检查是否是推荐审稿（只在审稿主界面，即论文列表页面时生效）
   const lowerQuestion = question.toLowerCase()
@@ -253,6 +392,8 @@ const sendMessage = async () => {
     lowerQuestion.includes('评审意见') ||
     lowerQuestion.includes('生成审稿')
   )) {
+    const idx = messages.value.findIndex(m => m.id === thinkingMsg.id)
+    if (idx > -1) messages.value.splice(idx, 1)
     // 创建空的 AI 消息用于流式显示
     const aiMsgId = Date.now() + 1
     let streamingContent = ''
@@ -318,6 +459,9 @@ const sendMessage = async () => {
       systemPrompt: modeSystemPrompt
     }
     console.log('[保存] 模式选择信息:', modeSelectInfo)
+
+    const thinkingIdx = messages.value.findIndex(m => m.id === thinkingMsg.id)
+    if (thinkingIdx > -1) messages.value.splice(thinkingIdx, 1)
 
     // 创建空的 AI 消息用于流式显示
     const aiMsgId = Date.now() + 1

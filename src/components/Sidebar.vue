@@ -12,6 +12,7 @@ const emit = defineEmits<{
 }>()
 
 const menuItems = [
+  { path: '/papers', name: '论文广场', icon: '📄' },
   { path: '/community', name: '社区', icon: '👥' },
   { path: '/skills', name: 'Skills', icon: '⚡' },
   { path: '/review', name: '审稿', icon: '📝' }
