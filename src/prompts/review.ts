@@ -13,39 +13,15 @@ export const systemPrompt = `你是用户的私人龙虾助手，一个专业的
 9. 代码调试：论文相关代码 debug、算法实现
 10. 论文评估：评估论文创新性、可行性、学术价值
 
-当用户提供论文或提出问题时，你应该：
-1. 分析用户的需求类型
-2. 提供专业、详细的帮助
-3. 如果是审稿，给出结构化的审稿意见
-4. 如果是其他需求，给出详细的建议和指导
+请用以下格式回答：
+【类型】帮助类型
+【回答】详细的回答内容
+【建议】建议（如果有）`
 
-请用 JSON 格式输出：
-{
-  "type": "帮助类型（审稿/润色/综述/实验设计/数据分析/翻译/图表/投稿/代码调试/评估）",
-  "content": "详细的回答内容",
-  "suggestions": ["建议1", "建议2"]
-}`;
-
-// 处理 AI 返回的结果
-export function processResponse(content: string): {
-  type: string;
-  content: string;
-  suggestions: string[];
-} {
-  try {
-    const parsed = JSON.parse(content);
-    return {
-      type: parsed.type || "其他",
-      content: parsed.content || content,
-      suggestions: parsed.suggestions || [],
-    };
-  } catch {
-    return {
-      type: "其他",
-      content: content,
-      suggestions: [],
-    };
-  }
+// 处理 AI 返回的结果 - 手动包装成固定格式
+export function processResponse(content: string): string {
+  return `【类型】学术论文相关
+【回答】${content}`
 }
 
 // 导出模式信息

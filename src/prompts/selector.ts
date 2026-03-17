@@ -37,15 +37,16 @@ export function processResponse(content: string): {
     const lowerContent = content.toLowerCase();
     if (lowerContent.includes("skill"))
       return { mode: "skills", reason: "涉及技能匹配" };
+    // 社区相关判断要放在学术论文前面，避免"学术社区"被误判为review
+    if (lowerContent.includes("community") || lowerContent.includes("社区") ||
+        lowerContent.includes("论坛") || lowerContent.includes("版主") ||
+        lowerContent.includes("积分") || lowerContent.includes("等级"))
+      return { mode: "community", reason: "涉及社区问题" };
     if (lowerContent.includes("review") || lowerContent.includes("审稿") ||
         lowerContent.includes("论文") || lowerContent.includes("润色") ||
         lowerContent.includes("文献") || lowerContent.includes("实验") ||
         lowerContent.includes("翻译") || lowerContent.includes("投稿"))
       return { mode: "review", reason: "涉及学术论文" };
-    if (lowerContent.includes("community") || lowerContent.includes("社区") ||
-        lowerContent.includes("论坛") || lowerContent.includes("版主") ||
-        lowerContent.includes("积分") || lowerContent.includes("等级"))
-      return { mode: "community", reason: "涉及社区问题" };
     return { mode: "chat", reason: "通用对话" };
   }
 }
