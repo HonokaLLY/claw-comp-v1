@@ -345,7 +345,8 @@ const sendMessage = async () => {
     const response = await api.sendChatWithContext(
       currentPaper.value.id,
       question,
-      reviewData.value
+      reviewData.value,
+      true  // isOnReviewPage: true，因为用户在审稿详情页面
     )
 
     messages.value.push({

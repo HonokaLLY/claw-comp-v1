@@ -578,6 +578,7 @@ const sendMessage = async () => {
       0,
       `请判断用户以下问题应该使用哪种模式：${question}`,
       {},
+      false,
       selectorPrompt
     )
 
@@ -630,7 +631,8 @@ const sendMessage = async () => {
           const processedContent = processResponses[selectedMode](streamingContent)
           messages.value[msgIndex].content = typeof processedContent === 'string' ? processedContent : streamingContent
         }
-      }
+      },
+      modeSystemPrompt
     )
 
     // 流式输出完成，标记结束并格式化

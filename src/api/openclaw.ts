@@ -290,13 +290,15 @@ const api = {
    * @param currentReview 当前审稿信息
    * @param isOnReviewPage 是否在审稿页面
    * @param onChunk 流式回调，每收到一个 chunk 就调用一次
+   * @param customSystemPrompt 自定义系统提示词（可选）
    */
   async sendChatWithContextStream(
     paperId: number,
     message: string,
     currentReview: { reviewMarkdown?: string } | null,
     isOnReviewPage: boolean = false,
-    onChunk: (content: string) => void
+    onChunk: (content: string) => void,
+    customSystemPrompt?: string
   ): Promise<{ reply: string; isReview?: boolean }> {
     console.log('[DEBUG] sendChatWithContextStream 流式调用 LLM API')
 
@@ -310,7 +312,7 @@ const api = {
     )
 
     // 构建消息历史
-    let systemContent = LLM_CONFIG.systemPrompt
+    let systemContent = customSystemPrompt || LLM_CONFIG.systemPrompt
 
     // 如果是审稿请求，修改 system prompt 让 LLM 生成审稿意见
     if (isReviewRequest) {
@@ -368,12 +370,18 @@ const api = {
 
   /**
    * 发送对话消息（带审稿意见上下文）- 非流式版本
+   * @param paperId 论文ID
+   * @param message 用户消息
+   * @param currentReview 当前审稿信息
+   * @param isOnReviewPage 是否在审稿页面
+   * @param customSystemPrompt 自定义系统提示词（可选）
    */
   async sendChatWithContext(
     paperId: number,
     message: string,
     currentReview: { reviewMarkdown?: string } | null,
-    isOnReviewPage: boolean = false
+    isOnReviewPage: boolean = false,
+    customSystemPrompt?: string
   ): Promise<{ reply: string; isReview?: boolean }> {
     console.log('[DEBUG] sendChatWithContext 尝试调用真实 LLM API')
 
@@ -387,7 +395,7 @@ const api = {
     )
 
     // 构建消息历史
-    let systemContent = LLM_CONFIG.systemPrompt
+    let systemContent = customSystemPrompt || LLM_CONFIG.systemPrompt
 
     // 如果是审稿请求，修改 system prompt 让 LLM 生成审稿意见
     if (isReviewRequest) {
