@@ -10,7 +10,7 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/community'
+      redirect: import.meta.env.BASE_URL + 'community'
     },
     {
       path: '/community',
