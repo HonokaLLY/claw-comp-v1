@@ -272,6 +272,7 @@ const chatStoragePlugin = {
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: './',
   plugins: [
     vue(),
     vueDevTools(),
