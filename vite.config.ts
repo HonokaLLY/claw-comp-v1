@@ -270,6 +270,7 @@ const chatStoragePlugin = {
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/claw-comp-v1/',
   plugins: [
     vue(),
     vueDevTools(),
