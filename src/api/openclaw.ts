@@ -7,7 +7,7 @@ interface Paper {
   title: string
   authors?: string
   keywords: string[]
-  abstract: string
+  abstract?: string
   pdfUrl?: string
   arXivId?: string
   venue?: string
@@ -357,7 +357,7 @@ const api = {
 
       // 模拟流式输出
       for (let i = 0; i < mockReply.length; i++) {
-        onChunk(mockReply[i])
+        onChunk(mockReply[i]!)
         await new Promise(resolve => setTimeout(resolve, 10))
       }
 
@@ -537,7 +537,7 @@ const api = {
       // 模拟流式输出
       const mockReply = MOCK_REVIEW_MARKDOWN
       for (let i = 0; i < mockReply.length; i++) {
-        onChunk(mockReply[i])
+        onChunk(mockReply[i]!)
         await new Promise(resolve => setTimeout(resolve, 10))
       }
 

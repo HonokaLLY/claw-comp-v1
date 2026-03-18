@@ -41,7 +41,13 @@ const reviewData = ref({
 const isCompleted = ref(false)
 
 // 审稿结论选项
-const reviewOptions = [
+type ReviewResult = '' | 'accept' | 'minor' | 'major' | 'reject'
+interface ReviewOption {
+  value: ReviewResult
+  label: string
+  activeClass: string
+}
+const reviewOptions: ReviewOption[] = [
   { value: 'accept', label: '接收', activeClass: 'bg-green-500 text-white' },
   { value: 'minor', label: '小修', activeClass: 'bg-blue-500 text-white' },
   { value: 'major', label: '大修', activeClass: 'bg-orange-500 text-white' },

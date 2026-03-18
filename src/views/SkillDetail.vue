@@ -97,6 +97,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { useSkillsStore } from '@/stores/skills'
 import { marked } from 'marked'
 import hljs from 'highlight.js/lib/core'
 import python from 'highlight.js/lib/languages/python'
@@ -133,91 +134,12 @@ interface FileItem {
   indentLevel: number
 }
 
-interface SkillItem {
-  id: string | number
-  file?: string
-  name: string
-  description?: string
-  owner?: string
-  slug?: string
-  displayName?: string
-  latest?: {
-    version?: string
-    publishedAt?: number
-    commit?: string
-  }
-  history?: any[]
-}
+// SkillItem接口已不再使用，相关功能由store处理
 
-// 技能名称和描述的中文映射
-const skillChineseMap: Record<string, { name: string, description: string }> = {
-  'Curriculum Generator': {
-    name: '📚 课程生成器',
-    description: '智能教育课程生成系统，具有严格的步骤执行和人工升级策略'
-  },
-  'Education': {
-    name: '🎓 教育',
-    description: '生成学习计划、测验、闪卡和复习清单，按主题跟踪学习进度'
-  },
-  'EduClaw IELTS Planner': {
-    name: '📅 IELTS学习秘书',
-    description: '详细的雅思学习计划，通过gcalcli安排Google日历，自动化学习材料管理'
-  },
-  'Error Analysis': {
-    name: '📊 错题分析',
-    description: '分析错误原因、知识点定位、举一反三出变式题'
-  },
-  'Flashcard': {
-    name: '🔁 闪卡',
-    description: '带有间隔重复的学习工具，管理闪卡组，优先复习最弱卡片'
-  },
-  'Learning Coach': {
-    name: '👨‍🏫 学习教练',
-    description: '个性化、多学科学习计划，主动提醒，策划资源，LLM生成测验'
-  },
-  'Medicine': {
-    name: '🏥 医学',
-    description: '支持从患者教育到临床实践和研究的医学理解'
-  },
-  'Quizlet': {
-    name: '📝 Quizlet学习集',
-    description: '构建高收益的Quizlet学习集，调整学习和测试会话，通过间隔重复诊断改进弱卡'
-  },
-  'School': {
-    name: '🏫 学校',
-    description: '面向K-12学生的AI教育，家长控制，按年龄自适应学习，作业帮助，考试准备'
-  },
-  'Study': {
-    name: '📖 学习',
-    description: '结构化学习会话，管理材料，使用主动回忆技术准备考试'
-  },
-  'Study Buddy': {
-    name: '🧑‍🤝‍🧑 学习伙伴',
-    description: '创建个性化学习计划，跟踪进度，提供反馈的AI学习伴侣'
-  },
-  'Study Buddy AI': {
-    name: '🤖 学习伙伴AI',
-    description: '22功能AI学习助手，闪卡、测验、间隔重复、番茄钟定时器、学习计划器'
-  },
-  'Study Habits': {
-    name: '📅 学习习惯',
-    description: '通过间隔重复、主动回忆和会话跟踪建立有效的学习习惯'
-  },
-  'Study Plan': {
-    name: '📋 学习计划',
-    description: '学习计划生成器，考研计划、考证规划、每日学习、番茄钟'
-  },
-  'Study Revision Planner': {
-    name: '🗓️ 复习计划',
-    description: '将教学大纲、考试范围或课程笔记转换为复习日历'
-  },
-  'Study Tutor': {
-    name: '👨‍🏫 学习导师',
-    description: '基于科学的学习辅导技能，涵盖学前诊断、教师准备、预习、笔记、复习、间隔重复'
-  }
-}
+// 技能中文映射已移至store中，通过transformSkillForDisplay处理
 
 const route = useRoute()
+const skillsStore = useSkillsStore()
 const skillId = ref<string>((route.params.id as string) || '')
 
 const loading = ref(true)
@@ -233,7 +155,6 @@ const skillOwner = ref('')
 const skillSlug = ref('')
 const skillVersion = ref('')
 const skillPublishedTime = ref('')
-const skillIndex = ref<SkillItem[]>([])
 const fileTreeRaw = ref<any[]>([])     // 原始文件树结构
 const markdownViewMode = ref<'preview' | 'source'>('preview') // 'preview' 或 'source'
 
@@ -299,55 +220,20 @@ function formatTime(timestamp?: number): string {
   return '刚刚'
 }
 
-// 加载技能索引
-async function loadSkillIndex() {
-  try {
-    const res = await fetch('/skills/index.json')
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    skillIndex.value = await res.json()
-  } catch (e: any) {
-    console.warn('无法加载技能索引:', e.message)
-  }
-}
+// 技能索引已从store获取，无需单独加载
 
-// 根据当前文件和技能ID更新技能信息
-function updateSkillInfo(fileName: string | null = null) {
-  if (!skillIndex.value.length) return
+// 根据技能ID更新技能信息
+function updateSkillInfo() {
+  const skillData = skillsStore.getSkillById(skillId.value)
+  if (!skillData) return
 
-  // 查找匹配的技能条目
-  let matchedSkills = skillIndex.value.filter(
-    skill => String(skill.id) === skillId.value && (!fileName || skill.file === fileName)
-  )
-
-  if (matchedSkills.length === 0) {
-    // 如果没有找到精确匹配的文件名，且fileName不是.md文件，则查找该技能ID的所有技能
-    if (fileName && !fileName.endsWith('.md')) {
-      matchedSkills = skillIndex.value.filter(skill => String(skill.id) === skillId.value)
-    } else {
-      return
-    }
-  }
-
-  // 优先选择SKILL.md，然后按文件名排序
-  matchedSkills.sort((a, b) => {
-    // SKILL.md 优先
-    if (a.file === 'SKILL.md') return -1
-    if (b.file === 'SKILL.md') return 1
-    // 其他按文件名排序
-    return (a.file || '').localeCompare(b.file || '')
-  })
-
-  const skill = matchedSkills[0]
-  if (!skill) return
-
-  // 使用中文映射获取技能名称
-  const displayName = skill.displayName || skill.name
-  const chineseMapping = skillChineseMap[displayName]
-  skillName.value = chineseMapping ? chineseMapping.name : displayName
-  skillOwner.value = skill.owner || '未知作者'
-  skillSlug.value = skill.slug || ''
-  skillVersion.value = skill.latest?.version || '未版本化'
-  skillPublishedTime.value = skill.latest?.publishedAt ? formatTime(skill.latest.publishedAt) : '未知时间'
+  // 使用store转换后的显示信息
+  const displayInfo = skillData.displayInfo
+  skillName.value = displayInfo.name
+  skillOwner.value = displayInfo.author
+  skillSlug.value = skillData.slug || ''
+  skillVersion.value = skillData.latest?.version || '未版本化'
+  skillPublishedTime.value = skillData.latest?.publishedAt ? formatTime(skillData.latest.publishedAt) : '未知时间'
 }
 
 // 扁平化文件树为列表
@@ -407,32 +293,15 @@ async function loadFileList() {
   loading.value = true
   error.value = null
   try {
-    // 先加载技能索引
-    await loadSkillIndex()
-
-    // 更新技能信息（无论第一个文件是什么类型）
+    // 更新技能信息
     updateSkillInfo()
 
-    // 尝试加载 files.json
-    const res = await fetch(`/skills/${skillId.value}/files.json`)
-    if (res.ok) {
-      const fileTree = await res.json()
-      // 扁平化文件树以便显示
-      files.value = flattenFileTree(fileTree)
-      // 保存原始文件树用于目录显示
-      fileTreeRaw.value = fileTree
-    } else {
-      // 降级方案：尝试常见文件名（兼容你之前的上传）
-      // 这里假设有 _meta.json 和 SKILL.md
-      files.value = flattenFileTree([
-        { name: '_meta.json', type: 'json', path: '_meta.json' },
-        { name: 'SKILL.md', type: 'markdown', path: 'SKILL.md' }
-      ])
-      fileTreeRaw.value = [
-        { name: '_meta.json', type: 'json', path: '_meta.json' },
-        { name: 'SKILL.md', type: 'markdown', path: 'SKILL.md' }
-      ]
-    }
+    // 从store获取文件树
+    const fileTree = skillsStore.getSkillFiles(skillId.value)
+    // 扁平化文件树以便显示
+    files.value = flattenFileTree(fileTree)
+    // 保存原始文件树用于目录显示
+    fileTreeRaw.value = fileTree
 
     // 如果有文件，默认选中第一个非目录文件
     const firstFile = files.value.find(f => f.type !== 'directory')
@@ -441,6 +310,15 @@ async function loadFileList() {
     }
   } catch (e: any) {
     error.value = '无法加载文件列表：' + e.message
+    // 降级方案：尝试常见文件名
+    files.value = flattenFileTree([
+      { name: '_meta.json', type: 'json', path: '_meta.json' },
+      { name: 'SKILL.md', type: 'markdown', path: 'SKILL.md' }
+    ])
+    fileTreeRaw.value = [
+      { name: '_meta.json', type: 'json', path: '_meta.json' },
+      { name: 'SKILL.md', type: 'markdown', path: 'SKILL.md' }
+    ]
   } finally {
     loading.value = false
   }
@@ -465,20 +343,19 @@ async function selectFile(file: FileItem) {
   try {
     // 更新技能信息（如果是.md文件）
     if (file.type === 'markdown' || file.displayName.endsWith('.md')) {
-      updateSkillInfo(file.displayName)
+      updateSkillInfo()
     }
 
-    const url = `/skills/${skillId.value}/${file.path}`
-    const res = await fetch(url)
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    let text = await res.text()
+    // 从store获取文件内容
+    const text = skillsStore.getSkillFileContent(skillId.value, file.path)
+    if (text === null) throw new Error('文件不存在')
     content.value = text
 
     // 去除 YAML front matter (--- ... ---)
-    text = text.replace(/^---[\s\S]*?---\n*/, '')
+    const cleanedText = text.replace(/^---[\s\S]*?---\n*/, '')
 
     if (file.type === 'markdown') {
-      renderedContent.value = await marked.parse(text)
+      renderedContent.value = await marked.parse(cleanedText)
     } else if (file.type === 'json') {
       try {
         const jsonObj = JSON.parse(text)

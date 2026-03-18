@@ -1,19 +1,26 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useSkillsStore } from '@/stores/skills'
+import type { SkillDisplay } from '@/types/skill'
 
 const router = useRouter()
+const skillsStore = useSkillsStore()
 
-interface Skill {
-  id: number
-  name: string
-  description: string
-  icon: string
-  category: string
-  author: string
-  downloads: number
-  content: string
-}
+// 使用store中的技能数据
+const skills = computed(() => skillsStore.skills)
+const categories = computed(() => skillsStore.categories)
+const selectedCategory = computed({
+  get: () => skillsStore.selectedCategory,
+  set: (value) => skillsStore.setCategory(value)
+})
+const searchKeyword = computed({
+  get: () => skillsStore.searchKeyword,
+  set: (value) => skillsStore.setSearchKeyword(value)
+})
+const loading = computed(() => skillsStore.loading)
+
+// Skill接口已由SkillDisplay替代，从store导入类型
 
 const showUploadDialog = ref(false)
 
@@ -25,257 +32,15 @@ const newSkill = ref({
   content: ''
 })
 
-const skills = ref<Skill[]>([])
-
-const selectedCategory = ref('全部')
-const searchKeyword = ref('')
-const categories = ['全部', '开发', '测试', '文档', '安全', '优化', '工具', '教育']
 const icons = ['⚡', '🔍', '🐛', '🧪', '📄', '🔧', '🔒', '🌍', '💡', '🎯', '🚀']
 
-// 从 JSON 文件加载 skills 数据
+// 从store加载数据
 onMounted(async () => {
-  try {
-    const res = await fetch('/skills/index.json')
-    const data = await res.json()
-    // 将数据转换为统一的Skill格式
-    skills.value = await transformSkillsData(data)
-  } catch (error) {
-    console.error('加载Skills失败:', error)
-  }
+  await skillsStore.bootstrap()
 })
 
-// 技能名称和描述的中文映射
-const skillChineseMap: Record<string, { name: string, description: string }> = {
-  'Curriculum Generator': {
-    name: '📚 课程生成器',
-    description: '智能教育课程生成系统，具有严格的步骤执行和人工升级策略'
-  },
-  'Education': {
-    name: '🎓 教育',
-    description: '生成学习计划、测验、闪卡和复习清单，按主题跟踪学习进度'
-  },
-  'EduClaw IELTS Planner': {
-    name: '📅 IELTS学习秘书',
-    description: '详细的雅思学习计划，通过gcalcli安排Google日历，自动化学习材料管理'
-  },
-  'Error Analysis': {
-    name: '📊 错题分析',
-    description: '分析错误原因、知识点定位、举一反三出变式题'
-  },
-  'Flashcard': {
-    name: '🔁 闪卡',
-    description: '带有间隔重复的学习工具，管理闪卡组，优先复习最弱卡片'
-  },
-  'Learning Coach': {
-    name: '👨‍🏫 学习教练',
-    description: '个性化、多学科学习计划，主动提醒，策划资源，LLM生成测验'
-  },
-  'Medicine': {
-    name: '🏥 医学',
-    description: '支持从患者教育到临床实践和研究的医学理解'
-  },
-  'Quizlet': {
-    name: '📝 Quizlet学习集',
-    description: '构建高收益的Quizlet学习集，调整学习和测试会话，通过间隔重复诊断改进弱卡'
-  },
-  'School': {
-    name: '🏫 学校',
-    description: '面向K-12学生的AI教育，家长控制，按年龄自适应学习，作业帮助，考试准备'
-  },
-  'Study': {
-    name: '📖 学习',
-    description: '结构化学习会话，管理材料，使用主动回忆技术准备考试'
-  },
-  'Study Buddy': {
-    name: '🧑‍🤝‍🧑 学习伙伴',
-    description: '创建个性化学习计划，跟踪进度，提供反馈的AI学习伴侣'
-  },
-  'Study Buddy AI': {
-    name: '🤖 学习伙伴AI',
-    description: '22功能AI学习助手，闪卡、测验、间隔重复、番茄钟定时器、学习计划器'
-  },
-  'Study Habits': {
-    name: '📅 学习习惯',
-    description: '通过间隔重复、主动回忆和会话跟踪建立有效的学习习惯'
-  },
-  'Study Plan': {
-    name: '📋 学习计划',
-    description: '学习计划生成器，考研计划、考证规划、每日学习、番茄钟'
-  },
-  'Study Revision Planner': {
-    name: '🗓️ 复习计划',
-    description: '将教学大纲、考试范围或课程笔记转换为复习日历'
-  },
-  'Study Tutor': {
-    name: '👨‍🏫 学习导师',
-    description: '基于科学的学习辅导技能，涵盖学前诊断、教师准备、预习、笔记、复习、间隔重复'
-  }
-}
 
-// 转换skills数据到统一格式
-async function transformSkillsData(rawData: any[]): Promise<Skill[]> {
-  const seenIds = new Set<number>()
-  const skillsList: Skill[] = []
-
-  for (const item of rawData) {
-    // 处理重复ID（如id=8有多个版本）
-    let id = Number(item.id)
-    if (seenIds.has(id)) {
-      // 为重复ID生成新ID（基于内容哈希）
-      const hash = await hashString(JSON.stringify(item))
-      id = 10000 + (hash % 1000)
-    }
-    seenIds.add(id)
-
-    // 根据不同的数据格式提取字段
-    const displayName = item.displayName || item.name || '未命名Skill'
-    const originalDescription = item.description || '无描述'
-
-    // 使用中文映射替换标题和描述
-    const chineseMapping = skillChineseMap[displayName]
-    const name = chineseMapping ? chineseMapping.name : displayName
-    const description = chineseMapping ? chineseMapping.description : originalDescription
-
-    // 旧数据可能没有这些字段，设置默认值
-    const category = item.category || getDefaultCategory(name, description)
-    const icon = item.icon || getDefaultIcon(category || name)
-    const author = item.author || item.owner || '未知'
-    const downloads = item.downloads || 0
-
-    // 尝试读取skill文件内容
-    let content = item.content || ''
-    if (!content && item.file) {
-      // 尝试从文件读取（需要知道技能目录，假设在数字目录下）
-      const skillDir = item.id.toString()
-      try {
-        const filePath = `/skills/${skillDir}/${item.file}`
-        const response = await fetch(filePath)
-        if (response.ok) {
-          content = await response.text()
-        }
-      } catch (error) {
-        console.warn(`无法读取skill内容 ${item.id}:`, error)
-      }
-    }
-
-    skillsList.push({
-      id,
-      name,
-      description,
-      icon,
-      category,
-      author,
-      downloads,
-      content
-    })
-  }
-
-  return skillsList
-}
-
-// 简单哈希函数
-async function hashString(str: string): Promise<number> {
-  let hash = 0
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i)
-    hash = ((hash << 5) - hash) + char
-    hash = hash & hash
-  }
-  return Math.abs(hash)
-}
-
-// 根据分类或名称获取默认图标
-function getDefaultIcon(categoryOrName: string | undefined | null): string {
-  if (!categoryOrName) {
-    // 默认返回第一个图标
-    return '⚡'
-  }
-
-  // 此时 categoryOrName 一定是 string
-  const name = categoryOrName as string
-
-  const iconMap: Record<string, string> = {
-    '开发': '⚡',
-    '测试': '🧪',
-    '文档': '📄',
-    '安全': '🔒',
-    '优化': '🚀',
-    '工具': '🔧',
-    '教育': '🎓',
-    'conatus': '🧠',
-    'order': '🛒',
-    'github': '🐙',
-    'gog': '📧',
-    'ontology': '🔗',
-    'proactive-agent': '🚀',
-    'summarize': '📝',
-    'nano-pdf': '📄',
-    'find-skills': '🔍',
-    'curriculum': '📚',
-    'learning': '🧠',
-    'study': '📖',
-    'school': '🏫',
-    'tutor': '👨‍🏫',
-    'quiz': '📝',
-    'flashcard': '🔁',
-    'medicine': '🏥',
-    'coach': '👨‍🏫'
-  }
-
-  const searchString = name.toLowerCase()
-  for (const [key, icon] of Object.entries(iconMap)) {
-    if (searchString.includes(key.toLowerCase())) {
-      return icon
-    }
-  }
-
-  // 默认图标列表
-  const defaultIcons = ['⚡', '🔍', '🐛', '🧪', '📄', '🔧', '🔒', '🌍', '💡', '🎯', '🚀', '🎓', '📚', '🧠', '📖', '🏫']
-  const hash = Math.abs(name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0))
-  return defaultIcons[hash % defaultIcons.length]!
-}
-
-// 根据名称和描述推断分类
-function getDefaultCategory(name: string, description: string): string {
-  const categoryPatterns: Record<string, string[]> = {
-    '开发': ['代码', '编程', '开发', 'bug', 'fix', 'review', 'refactor', 'github', 'conatus', 'proactive-agent', 'ontology'],
-    '测试': ['测试', 'test', '单元测试', '集成测试'],
-    '文档': ['文档', 'doc', '注释', 'comment', 'markdown', 'pdf', 'summarize', 'nano-pdf'],
-    '安全': ['安全', 'security', '漏洞', '扫描', 'audit', '防护'],
-    '优化': ['性能', '优化', 'perf', 'speed', '加速'],
-    '工具': ['工具', 'tool', '实用', 'utility', '翻译', 'find', 'order', '点餐', 'ios', 'android'],
-    '教育': ['教育', '学习', 'study', 'learning', '课程', 'curriculum', '教学', 'teacher', '学生', 'school', '学校', 'quiz', '测验', 'flashcard', '闪卡', 'tutor', '辅导', 'coach', '教练', 'medicine', '医学', 'ielts', '雅思', 'exam', '考试', '复习', 'revision', 'habits', '习惯', 'buddy', '伙伴', 'error-analysis', '错题分析']
-  }
-
-  const text = (name + ' ' + description).toLowerCase()
-  for (const [category, patterns] of Object.entries(categoryPatterns)) {
-    if (patterns.some(pattern => text.includes(pattern.toLowerCase()))) {
-      return category
-    }
-  }
-
-  return '工具' // 默认分类
-}
-
-const filteredSkills = computed(() => {
-  let result = skills.value
-
-  // 分类筛选
-  if (selectedCategory.value !== '全部') {
-    result = result.filter(skill => skill.category === selectedCategory.value)
-  }
-
-  // 关键词搜索
-  if (searchKeyword.value.trim()) {
-    const keyword = searchKeyword.value.toLowerCase()
-    result = result.filter(skill =>
-      skill.name.toLowerCase().includes(keyword) ||
-      skill.description.toLowerCase().includes(keyword)
-    )
-  }
-
-  return result
-})
+// 使用store提供的过滤后技能列表，直接使用skills computed属性
 
 const openUploadDialog = () => {
   newSkill.value = {
@@ -307,23 +72,21 @@ const submitSkill = () => {
     return
   }
 
-  const skill: Skill = {
-    id: Date.now(),
+  skillsStore.addSkill({
     name: newSkill.value.name,
     description: newSkill.value.description,
     icon: newSkill.value.icon,
     category: newSkill.value.category,
-    author: '我',
-    downloads: 0,
-    content: newSkill.value.content
-  }
+    content: newSkill.value.content,
+    author: '我'
+  })
 
-  skills.value.unshift(skill)
   showUploadDialog.value = false
 }
 
-const downloadSkill = (skill: Skill) => {
-  skill.downloads++
+const downloadSkill = (skill: SkillDisplay) => {
+  // 更新store中的下载计数
+  skillsStore.incrementDownloads(skill.id)
 
   // 创建并下载 markdown 文件
   const blob = new Blob([skill.content], { type: 'text/markdown;charset=utf-8' })
@@ -337,7 +100,7 @@ const downloadSkill = (skill: Skill) => {
   URL.revokeObjectURL(url)
 }
 
-const viewSkillDetail = (skill: Skill) => {
+const viewSkillDetail = (skill: SkillDisplay) => {
   // 跳转到技能详情页
   router.push(`/skills/${skill.id}`)
 }
@@ -376,7 +139,7 @@ const viewSkillDetail = (skill: Skill) => {
     </div>
 
     <div class="skills-grid">
-      <div v-for="skill in filteredSkills" :key="skill.id" class="skill-card">
+      <div v-for="skill in skills" :key="skill.id" class="skill-card">
         <div class="skill-icon">{{ skill.icon }}</div>
         <div class="skill-info">
           <h3>{{ skill.name }}</h3>

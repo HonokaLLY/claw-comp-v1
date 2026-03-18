@@ -1,8 +1,10 @@
 import { fileURLToPath, URL } from 'node:url'
 import { writeFileSync, existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync } from 'node:fs'
+import type { IncomingMessage, ServerResponse } from 'node:http'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
+import type { ViteDevServer } from 'vite'
 
 // 支持的模式
 const MODES = ['chat', 'community', 'skills', 'review']
@@ -36,12 +38,12 @@ function ensurePapersFile() {
 // 保存聊天记录到文件的 API 插件
 const chatStoragePlugin = {
   name: 'chat-storage',
-  configureServer(server) {
+  configureServer(server: ViteDevServer) {
     // 初始化时创建文件夹
     ensureModeDirs()
     ensurePapersFile()
 
-    server.middlewares.use('/api/papers', async (req, res) => {
+    server.middlewares.use('/api/papers', async (req: IncomingMessage, res: ServerResponse) => {
       res.setHeader('Access-Control-Allow-Origin', '*')
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
       res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
@@ -93,7 +95,7 @@ const chatStoragePlugin = {
       res.end(JSON.stringify({ error: 'Not Found' }))
     })
 
-    server.middlewares.use('/api/chat', async (req, res) => {
+    server.middlewares.use('/api/chat', async (req: IncomingMessage, res: ServerResponse) => {
       // 设置 CORS
       res.setHeader('Access-Control-Allow-Origin', '*')
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
@@ -188,7 +190,7 @@ const chatStoragePlugin = {
     })
 
     // 通用历史记录 API（不带模式前缀）
-    server.middlewares.use('/api/chat-history', async (req, res) => {
+    server.middlewares.use('/api/chat-history', async (req: IncomingMessage, res: ServerResponse) => {
       res.setHeader('Access-Control-Allow-Origin', '*')
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
       res.setHeader('Access-Control-Allow-Headers', 'Content-Type')

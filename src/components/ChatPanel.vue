@@ -246,7 +246,7 @@ const parsePaperDetail = (raw: string) => {
     const labelMatch = seg.match(labelRegex)
     const fullMatch = seg.match(fieldRegex)
     if (labelMatch && fullMatch) {
-      const field = mapLabelToField(labelMatch[1])
+      const field = mapLabelToField(labelMatch[1]!)
       const value = fullMatch[1] || ''
       if (value.trim()) {
         assignField(field, value)
@@ -377,7 +377,7 @@ const scriptedPaperFlow = async (question: string) => {
 
   const likeMatch = question.match(/(?:\u70b9\u8d5e|like)\s*(p\d+)/i)
   if (likeMatch) {
-    const targetId = likeMatch[1]
+    const targetId = likeMatch[1]!
     await pushAgentStep(`${AGENT_AMANYY_NAME} 正在定位论文 ${targetId}...`)
     papersStore.likeOnce(targetId)
     messages.value.push({
@@ -391,7 +391,8 @@ const scriptedPaperFlow = async (question: string) => {
 
   const commentMatch = question.match(/(?:\u8bc4\u8bba|comment)\s*(p\d+)\s*(.+)/i)
   if (commentMatch) {
-    const [, targetId, text] = commentMatch
+    const targetId = commentMatch[1]!
+    const text = commentMatch[2]!
     await pushAgentStep(`${AGENT_AMANYY_NAME} 正在阅读论文 ${targetId} 的上下文...`)
     await pushAgentStep(`${AGENT_AMANYY_NAME} 正在润色评论语气与表达...`)
     papersStore.addComment(targetId, text.trim(), {
@@ -553,7 +554,7 @@ const sendMessage = async () => {
         // 找到对应的消息并更新内容
         const msgIndex = messages.value.findIndex(m => m.id === aiMsgId)
         if (msgIndex > -1) {
-          messages.value[msgIndex].content = streamingContent
+          messages.value[msgIndex]!.content = streamingContent
         }
       }
     )
@@ -561,7 +562,7 @@ const sendMessage = async () => {
     // 流式输出完成，标记结束并填入审稿意见框
     const msgIndex = messages.value.findIndex(m => m.id === aiMsgId)
     if (msgIndex > -1) {
-      messages.value[msgIndex].isStreaming = false
+      messages.value[msgIndex]!.isStreaming = false
       reviewOpinion.value = streamingContent
     }
     isLoading.value = false
@@ -628,8 +629,8 @@ const sendMessage = async () => {
         const msgIndex = messages.value.findIndex(m => m.id === aiMsgId)
         if (msgIndex > -1) {
           // 使用对应模式的处理函数格式化输出
-          const processedContent = processResponses[selectedMode](streamingContent)
-          messages.value[msgIndex].content = typeof processedContent === 'string' ? processedContent : streamingContent
+          const processedContent = processResponses[selectedMode]!(streamingContent)
+          messages.value[msgIndex]!.content = typeof processedContent === 'string' ? processedContent : streamingContent
         }
       },
       modeSystemPrompt
@@ -638,12 +639,12 @@ const sendMessage = async () => {
     // 流式输出完成，标记结束并格式化
     const msgIndex = messages.value.findIndex(m => m.id === aiMsgId)
     if (msgIndex > -1) {
-      messages.value[msgIndex].isStreaming = false
+      messages.value[msgIndex]!.isStreaming = false
       // 流式完成后，再次处理内容（确保格式统一）
-      const finalContent = messages.value[msgIndex].content
-      const formattedContent = processResponses[selectedMode](finalContent)
-      messages.value[msgIndex].content = formattedContent
-      messages.value[msgIndex].content = formattedContent
+      const finalContent = messages.value[msgIndex]!.content
+      const formattedContent = processResponses[selectedMode]!(finalContent)
+      messages.value[msgIndex]!.content = formattedContent
+      messages.value[msgIndex]!.content = formattedContent
     }
   } catch (error) {
     console.error('对话出错:', error)
