@@ -2,6 +2,8 @@
 // LLM API 配置 - 在这里修改你的 API 设置
 // ============================================
 
+import { raw } from '@/data/papersMock'
+
 interface Paper {
   id: number
   title: string
@@ -189,12 +191,12 @@ async function callLLM(messages: { role: 'system' | 'user' | 'assistant'; conten
 const api = {
   /**
    * 获取推荐论文列表
+   * 初始返回空数组，用户点击"推荐审稿"按钮后由 recommendPapers() 更新
    */
   async getRecommendedPapers() {
     try {
-      const response = await fetch('/data/papers.json')
-      const data = await response.json()
-      return data.recommended || []
+      // 初始返回空数组，触发推荐后会通过 recommendPapers 更新
+      return []
     } catch (error) {
       console.error('获取推荐论文失败:', error)
       return []
@@ -206,9 +208,8 @@ const api = {
    */
   async getAllPapers() {
     try {
-      const response = await fetch('/data/papers.json')
-      const data = await response.json()
-      return data.all || []
+      // 从 raw 数组读取数据
+      return raw
     } catch (error) {
       console.error('获取所有论文失败:', error)
       return []
@@ -220,9 +221,8 @@ const api = {
    */
   async getPendingPapers() {
     try {
-      const response = await fetch('/data/papers.json')
-      const data = await response.json()
-      return data.pending || []
+      // 从 raw 数组读取数据，返回待审稿论文（取中间部分作为待审稿）
+      return raw.slice(5, 15)
     } catch (error) {
       console.error('获取待审稿论文失败:', error)
       return []
@@ -234,9 +234,8 @@ const api = {
    */
   async getCompletedPapers() {
     try {
-      const response = await fetch('/data/papers.json')
-      const data = await response.json()
-      return data.completed || []
+      // 从 raw 数组读取数据，返回已完成论文（取后部分作为已完成）
+      return raw.slice(15, 20)
     } catch (error) {
       console.error('获取已完成论文失败:', error)
       return []
