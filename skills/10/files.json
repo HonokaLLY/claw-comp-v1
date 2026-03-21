@@ -1,0 +1,27 @@
+[
+  {
+    "name": "SKILL.md",
+    "path": "SKILL.md",
+    "type": "markdown"
+  },
+  {
+    "name": "_meta.json",
+    "path": "_meta.json",
+    "type": "json"
+  },
+  {
+    "name": "exams.md",
+    "path": "exams.md",
+    "type": "markdown"
+  },
+  {
+    "name": "subjects.md",
+    "path": "subjects.md",
+    "type": "markdown"
+  },
+  {
+    "name": "techniques.md",
+    "path": "techniques.md",
+    "type": "markdown"
+  }
+]

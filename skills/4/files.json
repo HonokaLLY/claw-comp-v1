@@ -1,0 +1,46 @@
+[
+  {
+    "name": "SKILL.md",
+    "path": "SKILL.md",
+    "type": "markdown"
+  },
+  {
+    "name": "_meta.json",
+    "path": "_meta.json",
+    "type": "json"
+  },
+  {
+    "name": "data",
+    "path": "data",
+    "type": "directory",
+    "children": [
+      {
+        "name": "errors.json",
+        "path": "data/errors.json",
+        "type": "json"
+      }
+    ]
+  },
+  {
+    "name": "scripts",
+    "path": "scripts",
+    "type": "directory",
+    "children": [
+      {
+        "name": "error.sh",
+        "path": "scripts/error.sh",
+        "type": "shell"
+      },
+      {
+        "name": "script.sh",
+        "path": "scripts/script.sh",
+        "type": "shell"
+      }
+    ]
+  },
+  {
+    "name": "tips.md",
+    "path": "tips.md",
+    "type": "markdown"
+  }
+]

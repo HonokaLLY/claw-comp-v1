@@ -1,0 +1,34 @@
+[
+  {
+    "name": "SKILL.md",
+    "path": "SKILL.md",
+    "type": "markdown"
+  },
+  {
+    "name": "_meta.json",
+    "path": "_meta.json",
+    "type": "json"
+  },
+  {
+    "name": "scripts",
+    "path": "scripts",
+    "type": "directory",
+    "children": [
+      {
+        "name": "script.sh",
+        "path": "scripts/script.sh",
+        "type": "shell"
+      },
+      {
+        "name": "study.sh",
+        "path": "scripts/study.sh",
+        "type": "shell"
+      }
+    ]
+  },
+  {
+    "name": "tips.md",
+    "path": "tips.md",
+    "type": "markdown"
+  }
+]

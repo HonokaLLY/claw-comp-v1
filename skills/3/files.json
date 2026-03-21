@@ -1,0 +1,59 @@
+[
+  {
+    "name": "CHANGELOG.md",
+    "path": "CHANGELOG.md",
+    "type": "markdown"
+  },
+  {
+    "name": "README.md",
+    "path": "README.md",
+    "type": "markdown"
+  },
+  {
+    "name": "README_VI.md",
+    "path": "README_VI.md",
+    "type": "markdown"
+  },
+  {
+    "name": "SETUP.md",
+    "path": "SETUP.md",
+    "type": "markdown"
+  },
+  {
+    "name": "SETUP_VI.md",
+    "path": "SETUP_VI.md",
+    "type": "markdown"
+  },
+  {
+    "name": "SKILL.md",
+    "path": "SKILL.md",
+    "type": "markdown"
+  },
+  {
+    "name": "WORKFLOW.md",
+    "path": "WORKFLOW.md",
+    "type": "markdown"
+  },
+  {
+    "name": "_meta.json",
+    "path": "_meta.json",
+    "type": "json"
+  },
+  {
+    "name": "examples",
+    "path": "examples",
+    "type": "directory",
+    "children": [
+      {
+        "name": "sample-events.md",
+        "path": "examples/sample-events.md",
+        "type": "markdown"
+      }
+    ]
+  },
+  {
+    "name": "schema.sql",
+    "path": "schema.sql",
+    "type": "sql"
+  }
+]

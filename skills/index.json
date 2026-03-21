@@ -1,0 +1,242 @@
+[
+  {
+    "id": "1",
+    "file": "SKILL.md",
+    "name": "curriculum-generator",
+    "description": "Intelligent educational curriculum generation system with strict step enforcement and human escalation policies",
+    "owner": "kn7f7xn82acg6b23wrtgp181nx80vm88",
+    "slug": "curriculum-generator",
+    "displayName": "Curriculum Generator",
+    "latest": {
+      "version": "1.0.0",
+      "publishedAt": 1770646992080,
+      "commit": ""
+    },
+    "history": []
+  },
+  {
+    "id": "2",
+    "file": "SKILL.md",
+    "name": "education",
+    "description": "Generate study plans, quizzes, flashcards, and review checklists. Track learning progress by topic.",
+    "owner": "BytesAgain",
+    "slug": "education",
+    "displayName": "Education",
+    "latest": {
+      "version": "3.2.0",
+      "publishedAt": 1773716906915,
+      "commit": ""
+    },
+    "history": []
+  },
+  {
+    "id": "3",
+    "file": "SKILL.md",
+    "name": "educlaw-ielts-planner",
+    "description": "EduClaw - Personal IELTS Study Secretary: detailed planning, Google Calendar scheduling via gcalcli, automated study material management. 4-step workflow: Language Detect → Research → Calendar → Documentation.",
+    "owner": "kn7386y46e3nghpssayt7b6jeh82zjqh",
+    "slug": "educlaw-ielts-planner",
+    "displayName": "EduClaw IELTS Planner",
+    "latest": {
+      "version": "1.0.1",
+      "publishedAt": 1773594299307,
+      "commit": ""
+    },
+    "history": []
+  },
+  {
+    "id": "4",
+    "file": "SKILL.md",
+    "name": "error-analysis",
+    "description": "错题分析助手。分析错误原因、知识点定位、举一反三出变式题。. Use when you need error analysis capabilities. Triggers on: error analysis.",
+    "owner": "BytesAgain",
+    "slug": "error-analysis",
+    "displayName": "Error Analysis",
+    "latest": {
+      "version": "2.0.0",
+      "publishedAt": 1773665893758,
+      "commit": ""
+    },
+    "history": []
+  },
+  {
+    "id": "5",
+    "file": "SKILL.md",
+    "name": "flashcard",
+    "description": "Spaced repetition study tool with deck management. Create flashcard decks, add question-answer pairs, study with prioritized review (weakest cards first), track correct and wrong answers, view mastery progress, and manage multiple subject decks. Learn anything more efficiently.",
+    "owner": "BytesAgain",
+    "slug": "flashcard",
+    "displayName": "Flashcard",
+    "latest": {
+      "version": "2.0.0",
+      "publishedAt": 1773666000793,
+      "commit": ""
+    },
+    "history": []
+  },
+  {
+    "id": "6",
+    "file": "SKILL.md",
+    "name": "learning-coach",
+    "description": "Production learning coach for personalized, multi-subject study planning with proactive reminders, curated resources, LLM-generated quizzes, rubric-based grading, and adaptive roadmap updates. Use when users want structured learning guidance over time, skill assessments, topic-wise progress tracking, or autonomous coaching with explicit cron consent.",
+    "owner": "kn76dgp874tbsjqba4z9h7nzss802q2x",
+    "slug": "learning-coach",
+    "displayName": "Learning Coach",
+    "latest": {
+      "version": "0.3.0",
+      "publishedAt": 1772812572569,
+      "commit": ""
+    },
+    "history": []
+  },
+  {
+    "id": "7",
+    "file": "SKILL.md",
+    "name": "medicine",
+    "description": "Support medical understanding from patient education to clinical practice and research.",
+    "owner": "kn73vp5rarc3b14rc7wjcw8f8580t5d1",
+    "slug": "medicine",
+    "displayName": "Medicine",
+    "latest": {
+      "version": "1.0.0",
+      "publishedAt": 1770758007423,
+      "commit": ""
+    },
+    "history": []
+  },
+  {
+    "id": "8",
+    "file": "SKILL.md",
+    "name": "quizlet",
+    "description": "Build high-yield Quizlet study sets, tune Learn and Test sessions, and improve weak cards with spaced repetition diagnostics.",
+    "owner": "kn73vp5rarc3b14rc7wjcw8f8580t5d1",
+    "slug": "quizlet",
+    "displayName": "Quizlet",
+    "latest": {
+      "version": "1.0.0",
+      "publishedAt": 1772553133879,
+      "commit": ""
+    },
+    "history": []
+  },
+  {
+    "id": "9",
+    "file": "SKILL.md",
+    "name": "school",
+    "description": "AI-powered education for K-12 students with parental controls, adaptive learning by age, homework help, exam prep, and progress tracking.",
+    "owner": "kn73vp5rarc3b14rc7wjcw8f8580t5d1",
+    "slug": "school",
+    "displayName": "School",
+    "latest": {
+      "version": "1.0.0",
+      "publishedAt": 1771094166974,
+      "commit": ""
+    },
+    "history": []
+  },
+  {
+    "id": "10",
+    "file": "SKILL.md",
+    "name": "study",
+    "description": "Structure study sessions, manage materials, and prepare for exams with active recall techniques.",
+    "owner": "kn73vp5rarc3b14rc7wjcw8f8580t5d1",
+    "slug": "study",
+    "displayName": "Study",
+    "latest": {
+      "version": "1.0.1",
+      "publishedAt": 1771249525851,
+      "commit": ""
+    },
+    "history": []
+  },
+  {
+    "id": "11",
+    "file": "SKILL.md",
+    "name": "study-buddy",
+    "description": "AI-powered learning companion for creating personalized study plans, tracking progress, and providing feedback. Use when user wants to start learning something new, create a study plan, track learning progress, get study reminders, or receive learning feedback. Triggers include \"帮我制定学习计划\", \"我要学XX\", \"追踪我的学习进度\", \"学习打卡\", \"study plan\", \"learn programming\", \"track my progress\".",
+    "owner": "kn77zzg9p845zanvy6vrf76k7d81mcnm",
+    "slug": "study-buddy",
+    "displayName": "Study Buddy",
+    "latest": {
+      "version": "1.0.0",
+      "publishedAt": 1773030962840,
+      "commit": ""
+    },
+    "history": []
+  },
+  {
+    "id": "12",
+    "file": "SKILL.md",
+    "name": "study-buddy",
+    "description": "When user asks to study, create flashcards, take a quiz, make notes, revise, set study timer, track study hours, create study plan, explain a topic, test knowledge, do spaced repetition, summarize a chapter, practice questions, view study stats, or any learning/studying task. 22-feature AI study assistant with flashcards, quizzes, spaced repetition, Pomodoro timer, study planner, notes, and gamification. All data stays local — NO external API calls, NO network requests, NO data sent to any server.",
+    "owner": "kn7f98n8bjpgy8dcxpgzgfs14981ezb4",
+    "slug": "study-buddy-ai",
+    "displayName": "Study Buddy AI",
+    "latest": {
+      "version": "1.1.0",
+      "publishedAt": 1771762093830,
+      "commit": ""
+    },
+    "history": []
+  },
+  {
+    "id": "13",
+    "file": "SKILL.md",
+    "name": "study-habits",
+    "description": "Build effective study habits with spaced repetition, active recall, and session tracking",
+    "owner": "clawd-team",
+    "slug": "study-habits",
+    "displayName": "Study Habits",
+    "latest": {
+      "version": "1.0.0",
+      "publishedAt": 1769326643178,
+      "commit": ""
+    },
+    "history": []
+  },
+  {
+    "id": "14",
+    "file": "SKILL.md",
+    "name": "study-plan",
+    "description": "学习计划生成器。考研计划、考证规划、每日学习、番茄钟。Study plan generator for exams, certifications, daily schedules. 学习计划、考研计. Use when you need study plan capabilities. Triggers on: study plan.",
+    "owner": "BytesAgain",
+    "slug": "study-plan",
+    "displayName": "Study Plan",
+    "latest": {
+      "version": "2.0.0",
+      "publishedAt": 1773673942293,
+      "commit": ""
+    },
+    "history": []
+  },
+  {
+    "id": "15",
+    "file": "SKILL.md",
+    "name": "study-revision-planner",
+    "description": "Convert a syllabus, exam scope, or course notes into a revision calendar",
+    "owner": "kn72x1cmzp55stwep76p7stvnd82knct",
+    "slug": "study-revision-planner",
+    "displayName": "Study Revision Planner",
+    "latest": {
+      "version": "1.1.0",
+      "publishedAt": 1773395806307,
+      "commit": ""
+    },
+    "history": []
+  },
+  {
+    "id": "16",
+    "file": "SKILL.md",
+    "name": "study-tutor",
+    "description": "Science-based learning tutoring skill — For primary/secondary students, university students, self-learners, and exam candidates. Complete learning system covering pre-learning diagnosis, teacher preparation, preview, note-taking, review, and spaced repetition.",
+    "owner": "kn71ae0fg3bp4wfmvnkgh52e8582ejzs",
+    "slug": "study-tutor",
+    "displayName": "Study Tutor",
+    "latest": {
+      "version": "1.0.0",
+      "publishedAt": 1773147809500,
+      "commit": ""
+    },
+    "history": []
+  }
+]

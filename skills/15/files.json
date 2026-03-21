@@ -1,0 +1,75 @@
+[
+  {
+    "name": "CHANGELOG.md",
+    "path": "CHANGELOG.md",
+    "type": "markdown"
+  },
+  {
+    "name": "README.md",
+    "path": "README.md",
+    "type": "markdown"
+  },
+  {
+    "name": "SELF_CHECK.md",
+    "path": "SELF_CHECK.md",
+    "type": "markdown"
+  },
+  {
+    "name": "SKILL.md",
+    "path": "SKILL.md",
+    "type": "markdown"
+  },
+  {
+    "name": "_meta.json",
+    "path": "_meta.json",
+    "type": "json"
+  },
+  {
+    "name": "examples",
+    "path": "examples",
+    "type": "directory",
+    "children": [
+      {
+        "name": "example-prompt.md",
+        "path": "examples/example-prompt.md",
+        "type": "markdown"
+      }
+    ]
+  },
+  {
+    "name": "resources",
+    "path": "resources",
+    "type": "directory",
+    "children": [
+      {
+        "name": "study_plan_template.csv",
+        "path": "resources/study_plan_template.csv",
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "name": "scripts",
+    "path": "scripts",
+    "type": "directory",
+    "children": [
+      {
+        "name": "revision_schedule.py",
+        "path": "scripts/revision_schedule.py",
+        "type": "python"
+      }
+    ]
+  },
+  {
+    "name": "tests",
+    "path": "tests",
+    "type": "directory",
+    "children": [
+      {
+        "name": "smoke-test.md",
+        "path": "tests/smoke-test.md",
+        "type": "markdown"
+      }
+    ]
+  }
+]

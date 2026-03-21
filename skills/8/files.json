@@ -1,0 +1,42 @@
+[
+  {
+    "name": "SKILL.md",
+    "path": "SKILL.md",
+    "type": "markdown"
+  },
+  {
+    "name": "_meta.json",
+    "path": "_meta.json",
+    "type": "json"
+  },
+  {
+    "name": "diagnostics.md",
+    "path": "diagnostics.md",
+    "type": "markdown"
+  },
+  {
+    "name": "imports.md",
+    "path": "imports.md",
+    "type": "markdown"
+  },
+  {
+    "name": "memory-template.md",
+    "path": "memory-template.md",
+    "type": "markdown"
+  },
+  {
+    "name": "set-design.md",
+    "path": "set-design.md",
+    "type": "markdown"
+  },
+  {
+    "name": "setup.md",
+    "path": "setup.md",
+    "type": "markdown"
+  },
+  {
+    "name": "study-modes.md",
+    "path": "study-modes.md",
+    "type": "markdown"
+  }
+]
