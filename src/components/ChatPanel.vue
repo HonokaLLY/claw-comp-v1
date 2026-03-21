@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import api, { AVAILABLE_MODELS, setModel, LLM_CONFIG } from '@/api/openclaw'
+import api from '@/api/openclaw'
 import { systemPrompts, processResponses, selectorPrompt, selectorProcess, getModeType, type ModeType } from '@/prompts'
 import { isInReviewDetail, isInReviewMain, triggerRecommend, currentReviewPaper, reviewOpinion } from '@/stores/review'
 import { usePapersStore } from '@/stores/papers'
@@ -205,8 +205,6 @@ const messages = ref<Message[]>([
 
 const inputMessage = ref('')
 const isLoading = ref(false)
-const selectedModel = ref(LLM_CONFIG.model)
-const showModelDropdown = ref(false)
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 const AGENT_AMANYY_NAME = 'Lobster-Amanyy'
@@ -423,18 +421,6 @@ const scriptedPaperFlow = async (question: string) => {
   }
 
   return false
-}
-
-const changeModel = (modelId: string) => {
-  setModel(modelId)
-  selectedModel.value = modelId
-  showModelDropdown.value = false
-}
-
-// 获取当前模型名称
-const getCurrentModelName = () => {
-  const model = AVAILABLE_MODELS.find(m => m.id === selectedModel.value)
-  return model ? model.name : selectedModel.value
 }
 
 // 监听当前审稿论文变化，更新欢迎消息
@@ -671,25 +657,6 @@ const sendMessage = async () => {
         <button class="history-toggle-btn" @click="showHistory = !showHistory" title="历史记录">
           📜
         </button>
-        <!-- 模型选择器 -->
-        <div class="model-selector">
-          <button class="model-btn" @click="showModelDropdown = !showModelDropdown">
-            <span class="model-icon">🤖</span>
-            <span class="model-name">{{ getCurrentModelName() }}</span>
-            <span class="model-arrow">▼</span>
-          </button>
-          <div v-if="showModelDropdown" class="model-dropdown">
-            <div
-              v-for="model in AVAILABLE_MODELS"
-              :key="model.id"
-              class="model-option"
-              :class="{ active: selectedModel === model.id }"
-              @click="changeModel(model.id)"
-            >
-              {{ model.name }}
-            </div>
-          </div>
-        </div>
         <button v-if="isFloating" class="close-btn" @click="emit('close')">×</button>
       </div>
     </div>
@@ -826,76 +793,6 @@ const sendMessage = async () => {
 .history-toggle-btn:hover {
   background: #eef2ff;
   border-color: #4f6bff;
-}
-
-/* 模型选择器 */
-.model-selector {
-  position: relative;
-}
-
-.model-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  background: #f6f9ff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 12px;
-  color: #4f6bff;
-  transition: all 0.2s;
-}
-
-.model-btn:hover {
-  background: #eef2ff;
-  border-color: #4f6bff;
-}
-
-.model-icon {
-  font-size: 14px;
-}
-
-.model-name {
-  font-weight: 500;
-}
-
-.model-arrow {
-  font-size: 8px;
-  opacity: 0.7;
-}
-
-.model-dropdown {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: 4px;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(31, 41, 55, 0.15);
-  min-width: 140px;
-  z-index: 100;
-  overflow: hidden;
-}
-
-.model-option {
-  padding: 10px 14px;
-  font-size: 13px;
-  color: #374151;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.model-option:hover {
-  background: #f6f9ff;
-  color: #4f6bff;
-}
-
-.model-option.active {
-  background: #eef2ff;
-  color: #4f6bff;
-  font-weight: 500;
 }
 
 .close-btn {

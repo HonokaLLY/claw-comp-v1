@@ -18,28 +18,21 @@ interface Paper {
   isDone?: boolean
 }
 
-// 可用模型列表
-export const AVAILABLE_MODELS = [
-  { id: 'gpt-5-nano', name: 'GPT-5 Nano' },
-  { id: 'gpt-5-mini', name: 'GPT-5 Mini' },
-]
-
 export const LLM_CONFIG = {
-  // API 地址 (注意: 需要完整的 /chat/completions 路径)
-  apiUrl: 'https://api.zhizengzeng.com/v1/chat/completions',
+  // API 地址
+  apiUrl: '',
 
   // API Key
-  apiKey: 'sk-zk2fe51e305741f42b5b0ece671436509bd69b629f5d7010',
+  apiKey: '',
 
-  // 当前模型 - 修改这里切换模型
-  // 可选: gpt-5-nano, gpt-5-mini
-  model: 'gpt-5-nano',
+  // 当前模型
+  model: '',
 
   // 是否使用流式响应
   stream: false,
 
   // System prompt
-  systemPrompt: '你是一个有帮助的AI助手。请用用户提问的语言回答用户的问题。'
+  systemPrompt: '你是一个有帮助的AI助手。'
 }
 
 // 切换模型的函数
@@ -340,26 +333,20 @@ const api = {
     ]
 
     try {
-      // 调用流式 LLM API
-      const reply = await callLLMStream(messages, onChunk)
-
-      // 如果是审稿请求，标记返回结果
-      if (isReviewRequest) {
-        return { reply, isReview: true }
-      }
-      return { reply }
-    } catch (error) {
-      console.error('LLM API 流式调用失败，使用 Mock 数据:', error)
-
-      // 模拟网络延迟和流式输出
-      const mockReply = isReviewRequest ? MOCK_REVIEW_MARKDOWN : '好的，我可以帮你分析这篇论文。请告诉我你想了解哪些方面，或者直接点击"生成审稿意见"获取完整的审稿报告。'
-
-      // 模拟流式输出
+      // 直接使用 Mock 流式输出
+      const mockReply = isReviewRequest ? MOCK_REVIEW_MARKDOWN : '好的，我可以帮你分析这篇论文。请告诉我你想了解哪些方面。'
       for (let i = 0; i < mockReply.length; i++) {
         onChunk(mockReply[i]!)
-        await new Promise(resolve => setTimeout(resolve, 10))
       }
-
+      if (isReviewRequest) {
+        return { reply: mockReply, isReview: true }
+      }
+      return { reply: mockReply }
+    } catch (error) {
+      const mockReply = isReviewRequest ? MOCK_REVIEW_MARKDOWN : '好的，我可以帮你分析这篇论文。请告诉我你想了解哪些方面。'
+      for (let i = 0; i < mockReply.length; i++) {
+        onChunk(mockReply[i]!)
+      }
       if (isReviewRequest) {
         return { reply: mockReply, isReview: true }
       }
@@ -423,14 +410,14 @@ const api = {
     ]
 
     try {
-      // 调用 LLM API
-      const reply = await callLLM(messages)
-
-      // 如果是审稿请求，标记返回结果
+      // 直接使用 Mock 数据，跳过 API 调用
+      const mockReply = isReviewRequest
+        ? MOCK_REVIEW_MARKDOWN
+        : '好的，我可以帮你分析这篇论文。请告诉我你想了解哪些方面。'
       if (isReviewRequest) {
-        return { reply, isReview: true }
+        return { reply: mockReply, isReview: true }
       }
-      return { reply }
+      return { reply: mockReply }
     } catch (error) {
       console.error('LLM API 调用失败，使用 Mock 数据:', error)
 
@@ -480,15 +467,9 @@ const api = {
     ]
 
     try {
-      // 调用 LLM API
-      const reply = await callLLM(messages)
-      return { reply, isReview: true }
+      // 直接使用 Mock 数据
+      return { reply: MOCK_REVIEW_MARKDOWN, isReview: true }
     } catch (error) {
-      console.error('LLM API 调用失败，使用 Mock 数据:', error)
-
-      // 模拟网络延迟
-      await new Promise(resolve => setTimeout(resolve, 1200))
-
       return {
         reply: MOCK_REVIEW_MARKDOWN,
         isReview: true
@@ -527,9 +508,11 @@ const api = {
     ]
 
     try {
-      // 调用流式 LLM API
-      const reply = await callLLMStream(messages, onChunk)
-      return { reply, isReview: true }
+      // 直接使用 Mock 流式输出
+      for (let i = 0; i < MOCK_REVIEW_MARKDOWN.length; i++) {
+        onChunk(MOCK_REVIEW_MARKDOWN[i]!)
+      }
+      return { reply: MOCK_REVIEW_MARKDOWN, isReview: true }
     } catch (error) {
       console.error('LLM API 流式调用失败，使用 Mock 数据:', error)
 
